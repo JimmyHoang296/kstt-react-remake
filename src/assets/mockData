@@ -1,0 +1,11 @@
+export const mockData = {
+  tasks: [
+    { id: 1, caseId: 'CASE-001', email: 'user1@example.com', category: 'Category A', status: 'In Progress', source: 'Email', shopCode: 'CH-101', shopName: 'Shop A', summary: 'Customer complaint about product X', assignedTo: 'John Doe', supporting: 'Jane Smith', teamLead: 'Boss Man', assignedDate: '2023-10-26', completedDate: '', violationGroup: 'Error 1', lossValue: 100, recoveredValue: 50, conclusion: '', note: '' },
+    { id: 2, caseId: 'CASE-002', email: 'user2@example.com', category: 'Category B', status: 'Overdue', source: 'Phone', shopCode: 'CH-102', shopName: 'Shop B', summary: 'Technical issue with service Y', assignedTo: 'Peter Jones', supporting: 'Jane Smith', teamLead: 'Boss Man', assignedDate: '2023-10-20', completedDate: '', violationGroup: 'Error 2', lossValue: 200, recoveredValue: 0, conclusion: '', note: '' },
+  ],
+  shops: [
+    { shopCode: 'CH-101', shopName: 'Shop A', address: '123 Main St', qlkv: 'Manager A', gdv: 'Director A', kstt: 'Inspector A' },
+    { shopCode: 'CH-102', shopName: 'Shop B', address: '456 Side St', qlkv: 'Manager B', gdv: 'Director B', kstt: 'Inspector B' },
+    { shopCode: 'CH-103', shopName: 'Shop C', address: '789 Back St', qlkv: 'Manager C', gdv: 'Director C', kstt: 'Inspector C' },
+  ],
+};
