@@ -34,7 +34,7 @@ const App = () => {
       <Sidebar isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen} setCurrentPage={setCurrentPage} />
       <div className={`flex-1 flex flex-col transition-all duration-300 ${isSidebarOpen ? 'ml-64' : 'ml-16'}`}>
         <Header setIsSidebarOpen={setIsSidebarOpen} />
-        <main className="flex-1 p-8">
+        <main className="flex-1 p-2 ">
           {renderContent()}
         </main>
       </div>
