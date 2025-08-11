@@ -10,13 +10,11 @@ export const mockData = {
   ],
 };
 
-
-
 export const response = {
   "user": {
-    "id": "dunghd",
-    "name": "Hoàng Dương Dũng",
-    "role": "hod",
+    "id": "ngocbb",
+    "name": "Bùi Bích Ngọc",
+    "role": "emp",
     "hod": "Hoàng Dương Dũng"
   },
   "caseObj": [

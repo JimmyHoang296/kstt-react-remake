@@ -65,6 +65,7 @@ const TaskManager = () => {
     };
 
     try {
+      console.log (JSON.stringify(submitData))
       const response = await fetch(URL, {
         method: "POST",
         headers: {
@@ -72,28 +73,23 @@ const TaskManager = () => {
         },
         body: JSON.stringify(submitData), // body data type must match "Content-Type" header
       });
-      await response.json(); // Assuming response is JSON
+      
+      const result = await response.json(); // Assuming response is JSON
+      if (result.success) {
+      // update to local
+      newTask.id = result.data;
+      setTasks([...tasks, newTask])
+      // setTasks([...tasks, { ...newTask, id: tasks.length + 1 }]);
+      handleCloseModal();
+    }
     } catch (error) {
       console.error("Error sending request:", error);
       return { success: false, error: error.message }; // Return error object
     } finally {
     }
 
-    if (response.success) {
-      // update to local
-      newTask.id = response.data;
-      setTasks([...task, newTask])
-      // setTasks([...tasks, { ...newTask, id: tasks.length + 1 }]);
-      handleCloseModal();
-    }
+    
 
-
-
-
-
-    console.log(newTask)
-    // setTasks([...tasks, { ...newTask, id: tasks.length + 1 }]);
-    handleCloseModal();
   };
   const [currentPage, setCurrentPage] = useState(1);
   const tasksPerPage = 20;

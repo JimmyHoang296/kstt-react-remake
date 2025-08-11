@@ -1,29 +1,28 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { response } from '../../assets/mockData';
 import { Save, Trash } from 'lucide-react';
+import { getTodayDateString } from '../../assets/helpers';
 // Task Detail Modal Component
 const TaskDetailModal = ({ task, onClose, onSave, onUpdate, onDelete }) => {
-    const [formData, setFormData] = useState(
-        task || {
-            id: "",
-            email: "",
-            rank: "",
-            status: "",
-            type: "",
-            source: "",
-            sap: "",
-            store: "",
-            pic: "",
-            startDate: "",
-            endDate: "",
-            group: "",
-            lossValue: "",
-            returnValue: "",
-            summarize: "",
-            note: "",
-            conclusion: "",
-        }
-    );
+    const [formData, setFormData] = useState(task == {} ? task : {
+        id: "",
+        email: "",
+        rank: "",
+        status: "",
+        type: "",
+        source: "",
+        sap: "",
+        store: "",
+        pic: response.user.name,
+        startDate: getTodayDateString(),
+        endDate: "",
+        group: "",
+        lossValue: "",
+        returnValue: "",
+        summarize: "",
+        note: "",
+        conclusion: "",
+    });
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
@@ -86,7 +85,7 @@ const TaskDetailModal = ({ task, onClose, onSave, onUpdate, onDelete }) => {
                             </label>
                             <select
                                 name="pic"
-                                value={formData.assignedTo}
+                                value={formData.pic}
                                 onChange={handleInputChange}
                                 className="w-full p-2 border rounded-md"
                             >
