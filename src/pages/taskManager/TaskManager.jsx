@@ -1,27 +1,36 @@
 import React, { useMemo, useState } from "react";
-import { mockData } from "../../assets/mockData";
-import { Eye, Plus, Save, Trash } from "lucide-react";
+import { Eye, Plus } from "lucide-react";
 import { response } from "../../assets/mockData";
 import { toDateInputValue } from "../../assets/helpers";
 import { URL } from "../../assets/variables";
 import TaskDetailModal from "./TaskDetailModal";
 import Pagination from "./Pagination";
+import LoadingModal from "../../components/LoadingModal";
+
 // Task Management Component (CRUD)
 const TaskManager = () => {
   const [tasks, setTasks] = useState(response.caseObj);
-  const [searchQuery, setSearchQuery] = useState({ email: '', status: '', pic: '' });
+  const [searchQuery, setSearchQuery] = useState({
+    email: "",
+    status: "",
+    pic: "",
+  });
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [selectedTask, setSelectedTask] = useState(null);
   const handleSearchChange = (e) => {
-    const name = e.target.name
-    setSearchQuery({ ...searchQuery, [name]: e.target.value })
+    const name = e.target.name;
+    setSearchQuery({ ...searchQuery, [name]: e.target.value });
   };
 
   const filteredTasks = tasks.filter(
     (task) =>
-      (!searchQuery.email || task.email.toLowerCase().includes(searchQuery.email.toLowerCase())) &&
-      (!searchQuery.pic || task.pic.toLowerCase().includes(searchQuery.pic.toLowerCase())) &&
-      (!searchQuery.status || task.status.toLowerCase().includes(searchQuery.status.toLowerCase()))
+      (!searchQuery.email ||
+        task.email.toLowerCase().includes(searchQuery.email.toLowerCase())) &&
+      (!searchQuery.pic ||
+        task.pic.toLowerCase().includes(searchQuery.pic.toLowerCase())) &&
+      (!searchQuery.status ||
+        task.status.toLowerCase().includes(searchQuery.status.toLowerCase()))
   );
 
   const handleOpenModal = (task) => {
@@ -34,38 +43,14 @@ const TaskManager = () => {
     setSelectedTask(null);
   };
 
-  const handleUpdate = (updatedTask) => {
-    setTasks(
-      tasks.map((task) => (task.id === updatedTask.id ? updatedTask : task))
-    );
-    handleCloseModal();
-  };
-
-  const handleDelete = (taskId) => {
-    setTasks(tasks.filter((task) => task.id !== taskId));
-    handleCloseModal();
-  };
-
-  // Add functionality for creating a new task
-  const handleAddNewTask = () => {
-    setSelectedTask({}); // Open modal with empty form for new task
-    setIsModalOpen(true);
-  };
-
-  async function handleSaveNewTask(newTask) {
-    const user = response.user
-    newTask.hod = user.hod
-
-
+  async function handleUpdate(updatedTask) {
     // update to dtbase
-
     const submitData = {
-      type: "new",
-      data: newTask,
+      type: "update",
+      data: updatedTask,
     };
-
     try {
-      console.log (JSON.stringify(submitData))
+      setLoading(true);
       const response = await fetch(URL, {
         method: "POST",
         headers: {
@@ -73,24 +58,94 @@ const TaskManager = () => {
         },
         body: JSON.stringify(submitData), // body data type must match "Content-Type" header
       });
-      
+
       const result = await response.json(); // Assuming response is JSON
       if (result.success) {
-      // update to local
-      newTask.id = result.data;
-      setTasks([...tasks, newTask])
-      // setTasks([...tasks, { ...newTask, id: tasks.length + 1 }]);
-      handleCloseModal();
-    }
+        // update to local
+        setTasks(tasks.map(task => task.id===updatedTask.id?updatedTask:task));
+        handleCloseModal();
+      }
     } catch (error) {
       console.error("Error sending request:", error);
       return { success: false, error: error.message }; // Return error object
     } finally {
+      setLoading(false);
     }
+  }
 
-    
+  async function handleDelete(taskId) {
+    if (!confirm("Bạn muốn xóa sự vụ này")) return;
+    // update to dtbase
+    const submitData = {
+      type: "delete",
+      data: taskId,
+    };
+    try {
+      setLoading(true);
+      const response = await fetch(URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "text/plain;charset=utf-8",
+        },
+        body: JSON.stringify(submitData), // body data type must match "Content-Type" header
+      });
 
+      const result = await response.json(); // Assuming response is JSON
+      if (result.success) {
+        // delete in local
+        setTasks((prev) => prev.filter((task) => task.id !== taskId));
+        // setTasks([...tasks, { ...newTask, id: tasks.length + 1 }]);
+        handleCloseModal();
+      }
+    } catch (error) {
+      console.error("Error sending request:", error);
+      return { success: false, error: error.message }; // Return error object
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // Add functionality for creating a new task
+  const handleAddNewTask = () => {
+    setSelectedTask(null); // Open modal with empty form for new task
+    setIsModalOpen(true);
   };
+
+  async function handleSaveNewTask(newTask) {
+    const user = response.user;
+    newTask.hod = user.hod;
+
+    // update to dtbase
+
+    const submitData = {
+      type: "new",
+      data: newTask,
+    };
+    try {
+      setLoading(true);
+      const response = await fetch(URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "text/plain;charset=utf-8",
+        },
+        body: JSON.stringify(submitData), // body data type must match "Content-Type" header
+      });
+
+      const result = await response.json(); // Assuming response is JSON
+      if (result.success) {
+        // update to local
+        newTask.id = result.data;
+        setTasks([...tasks, newTask]);
+        // setTasks([...tasks, { ...newTask, id: tasks.length + 1 }]);
+        handleCloseModal();
+      }
+    } catch (error) {
+      console.error("Error sending request:", error);
+      return { success: false, error: error.message }; // Return error object
+    } finally {
+      setLoading(false);
+    }
+  }
   const [currentPage, setCurrentPage] = useState(1);
   const tasksPerPage = 20;
 
@@ -120,7 +175,9 @@ const TaskManager = () => {
         <h3 className="text-xl font-bold mb-2">Tìm kiếm sự vụ</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
           <div>
-            <label className="block text-gray-700 text-sm mb-1">Tiêu đề email</label>
+            <label className="block text-gray-700 text-sm mb-1">
+              Tiêu đề email
+            </label>
             <input
               type="text"
               name="email"
@@ -154,7 +211,7 @@ const TaskManager = () => {
 
           <div className="flex sm:justify-end items-end">
             <button
-              onClick={() => setSearchQuery({ email: '', status: '', pic: '' })}
+              onClick={() => setSearchQuery({ email: "", status: "", pic: "" })}
               className="bg-gray-300 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-400 w-full sm:w-auto"
             >
               Clear Search
@@ -174,11 +231,21 @@ const TaskManager = () => {
           <table className="min-w-full divide-y divide-gray-200 text-sm">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                <th className="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                <th className="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">PIC</th>
-                <th className="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">Start Date</th>
-                <th className="px-4 py-3 text-center font-medium text-gray-500 uppercase tracking-wider">Hành động</th>
+                <th className="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">
+                  Email
+                </th>
+                <th className="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">
+                  Status
+                </th>
+                <th className="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">
+                  PIC
+                </th>
+                <th className="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">
+                  Start Date
+                </th>
+                <th className="px-4 py-3 text-center font-medium text-gray-500 uppercase tracking-wider">
+                  Hành động
+                </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -187,16 +254,19 @@ const TaskManager = () => {
                   <td className="px-4 py-3 max-w-80 text-wrap">{task.email}</td>
                   <td className="px-4 py-3 ">
                     <span
-                      className={`px-2 inline-flex text-center text-xs leading-5 font-semibold rounded-full ${task.status === "Đang xử lý"
-                        ? "bg-yellow-100 text-yellow-800"
-                        : "bg-green-100 text-green-800"
-                        }`}
+                      className={`px-2 inline-flex text-center text-xs leading-5 font-semibold rounded-full ${
+                        task.status === "Đang xử lý"
+                          ? "bg-yellow-100 text-yellow-800"
+                          : "bg-green-100 text-green-800"
+                      }`}
                     >
                       {task.status}
                     </span>
                   </td>
                   <td className="px-4 py-3 ">{task.pic}</td>
-                  <td className="px-4 py-3 ">{toDateInputValue(task.startDate)}</td>
+                  <td className="px-4 py-3 ">
+                    {toDateInputValue(task.startDate)}
+                  </td>
                   <td className="px-4 py-3  text-center">
                     <button
                       onClick={() => handleOpenModal(task)}
@@ -219,28 +289,37 @@ const TaskManager = () => {
               className="p-4 border rounded-lg shadow-sm bg-white space-y-2"
             >
               <div>
-                <span className="text-xs font-semibold text-gray-500">Email:</span>
+                <span className="text-xs font-semibold text-gray-500">
+                  Email:
+                </span>
                 <p className="text-sm">{task.email}</p>
               </div>
               <div>
-                <span className="text-xs font-semibold text-gray-500">Status:</span>
+                <span className="text-xs font-semibold text-gray-500">
+                  Status:
+                </span>
                 <p>
                   <span
-                    className={`px-2 py-1 text-xs leading-5 font-semibold rounded-full ${task.status === "Đang xử lý"
-                      ? "bg-yellow-100 text-yellow-800"
-                      : "bg-green-100 text-green-800"
-                      }`}
+                    className={`px-2 py-1 text-xs leading-5 font-semibold rounded-full ${
+                      task.status === "Đang xử lý"
+                        ? "bg-yellow-100 text-yellow-800"
+                        : "bg-green-100 text-green-800"
+                    }`}
                   >
                     {task.status}
                   </span>
                 </p>
               </div>
               <div>
-                <span className="text-xs font-semibold text-gray-500">PIC:</span>
+                <span className="text-xs font-semibold text-gray-500">
+                  PIC:
+                </span>
                 <p className="text-sm">{task.pic}</p>
               </div>
               <div>
-                <span className="text-xs font-semibold text-gray-500">Start Date:</span>
+                <span className="text-xs font-semibold text-gray-500">
+                  Start Date:
+                </span>
                 <p className="text-sm">{task.startDate}</p>
               </div>
               <div className="flex justify-end">
@@ -272,12 +351,9 @@ const TaskManager = () => {
           onDelete={handleDelete}
         />
       )}
+      {loading && <LoadingModal message={"Loading..."} />}
     </div>
   );
 };
-
-
-
-
 
 export default TaskManager;

@@ -4,7 +4,7 @@ import { Save, Trash } from 'lucide-react';
 import { getTodayDateString } from '../../assets/helpers';
 // Task Detail Modal Component
 const TaskDetailModal = ({ task, onClose, onSave, onUpdate, onDelete }) => {
-    const [formData, setFormData] = useState(task == {} ? task : {
+    const [formData, setFormData] = useState( task || {
         id: "",
         email: "",
         rank: "",
@@ -58,7 +58,7 @@ const TaskDetailModal = ({ task, onClose, onSave, onUpdate, onDelete }) => {
                     </h3>
                     <button
                         onClick={onClose}
-                        className="text-gray-400 hover:text-gray-600"
+                        className="text-gray-600 hover:text-gray-600 text-5xl"
                     >
                         &times;
                     </button>
