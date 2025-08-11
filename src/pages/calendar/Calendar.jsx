@@ -1,9 +1,15 @@
-import React, { useState } from 'react';
-import { ChevronLeft } from 'lucide-react';
+import React, { useState } from "react";
+import { ChevronLeft } from "lucide-react";
+import { response } from "../../assets/mockData";
+import LoadingModal from "../../components/LoadingModal";
+import { URL } from "../../assets/variables";
 
-const Calendar = () => {
+const Calendar = ({ onSubmit }) => {
   const [currentWeekStart, setCurrentWeekStart] = useState(new Date());
-
+  const [weekData, setWeekData] = useState({}); // { index: { work, storeNumber, martNumber } }
+  const [isChanged, setIsChanged] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const { id: user, name } = response.user;
   const getWeekDays = (startOfWeek) => {
     const days = [];
     let day = new Date(startOfWeek);
@@ -19,54 +25,132 @@ const Calendar = () => {
   };
 
   const handlePreviousWeek = () => {
-    const newDate = new Date(currentWeekStart);
-    newDate.setDate(newDate.getDate() - 7);
-    setCurrentWeekStart(newDate);
+    if (isChanged && confirm("Bạn có muốn lưu lại thay đổi vừa rồi")) {
+      handleUpdate();
+    } else {
+      const newDate = new Date(currentWeekStart);
+      newDate.setDate(newDate.getDate() - 7);
+      setCurrentWeekStart(newDate);
+      setIsChanged(false);
+    }
   };
 
   const handleNextWeek = () => {
-    const newDate = new Date(currentWeekStart);
-    newDate.setDate(newDate.getDate() + 7);
-    setCurrentWeekStart(newDate);
+    if (isChanged && confirm("Bạn có muốn lưu lại thay đổi vừa rồi")) {
+      handleUpdate();
+    } else {
+      const newDate = new Date(currentWeekStart);
+      newDate.setDate(newDate.getDate() + 7);
+      setCurrentWeekStart(newDate);
+      setIsChanged(false);
+    }
   };
 
   const handleThisWeek = () => {
-    setCurrentWeekStart(new Date());
+    if (isChanged && confirm("Bạn có muốn lưu lại thay đổi vừa rồi")) {
+      handleUpdate();
+    } else {
+      setCurrentWeekStart(new Date());
+      setIsChanged(false);
+    }
   };
 
   const weekdays = getWeekDays(currentWeekStart);
 
+  const handleChange = (index, field, value) => {
+    setWeekData((prev) => ({
+      ...prev,
+      [index]: {
+        ...prev[index],
+        [field]: value,
+      },
+    }));
+    setIsChanged(true);
+  };
+
+  const handleUpdate = async () => {
+    const submitArray = weekdays.map((day, index) => ({
+      date: day.toISOString().split("T")[0], // format YYYY-MM-DD
+      user,
+      name,
+      work: weekData[index]?.work || "",
+      storeNumber: weekData[index]?.storeNumber || "",
+      martNumber: weekData[index]?.martNumber || "",
+    }));
+
+    // update to dtbase
+    const submitData = {
+      type: "updateWork",
+      data: submitArray,
+    };
+    try {
+      setLoading(true);
+      const response = await fetch(URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "text/plain;charset=utf-8",
+        },
+        body: JSON.stringify(submitData), // body data type must match "Content-Type" header
+      });
+
+      const result = await response.json(); // Assuming response is JSON
+      if (result.success) {
+        setIsChanged(false);
+
+        // update to local
+      }
+    } catch (error) {
+      console.error("Error sending request:", error);
+      return { success: false, error: error.message }; // Return error object
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="bg-white rounded-xl shadow-md p-6">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4 gap-2">
-        <h2 className="text-2xl font-bold">Lịch làm việc</h2>
-        <div className="flex space-x-2 items-center">
-          <button onClick={handlePreviousWeek} className="p-2 rounded-full hover:bg-gray-200">
-            <ChevronLeft className="w-5 h-5" />
-          </button>
-
-          <span className="font-semibold text-lg">
-            {weekdays[0].toLocaleDateString()} - {weekdays[4].toLocaleDateString()}
-          </span>
-
-          <button onClick={handleNextWeek} className="p-2 rounded-full hover:bg-gray-200">
-            <ChevronLeft className="w-5 h-5 rotate-180" />
-          </button>
-
+      <h2 className="text-2xl font-bold">Lịch làm việc</h2>
+      <div className="flex space-x-2 items-center justify-between mb-4">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
           <button
             onClick={handleThisWeek}
             className="px-3 py-1 border rounded hover:bg-gray-100 text-sm"
           >
             Tuần này
           </button>
+          <button
+            onClick={handlePreviousWeek}
+            className="p-2 rounded-full hover:bg-gray-200"
+          >
+            <ChevronLeft className="w-5 h-5" />
+          </button>
+
+          <span className="font-semibold text-lg">
+            {weekdays[0].toLocaleDateString()} -{" "}
+            {weekdays[4].toLocaleDateString()}
+          </span>
+
+          <button
+            onClick={handleNextWeek}
+            className="p-2 rounded-full hover:bg-gray-200"
+          >
+            <ChevronLeft className="w-5 h-5 rotate-180" />
+          </button>
         </div>
+        {/* Update Button */}
+        <button
+          onClick={handleUpdate}
+          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+        >
+          Cập nhật
+        </button>
       </div>
 
       {/* Table header for desktop only */}
-      <div className="hidden md:grid md:grid-cols-4 gap-4 font-bold border-b pb-2 mb-2">
+      <div className="hidden md:grid md:grid-cols-5 gap-4 font-bold border-b pb-2 mb-2">
         <div>Ngày</div>
-        <div>Chi tiết công việc</div>
+        <div className="col-span-2">Chi tiết công việc</div>
         <div>Số cửa hàng</div>
         <div>Số siêu thị</div>
       </div>
@@ -75,24 +159,26 @@ const Calendar = () => {
       {weekdays.map((day, index) => (
         <div
           key={index}
-          className="grid grid-cols-1 md:grid-cols-4 gap-4 items-start mb-4 border-b pb-4 md:border-0 md:pb-0"
+          className="grid grid-cols-1 md:grid-cols-5 gap-4 items-start mb-4 border-b pb-4 md:border-0 md:pb-0"
         >
           {/* Date */}
           <div>
             <p className="font-bold">
-              {day.toLocaleDateString('vi-VN', { weekday: 'long' })}
+              {day.toLocaleDateString("vi-VN", { weekday: "long" })}
             </p>
             <p className="text-sm text-gray-500">{day.toLocaleDateString()}</p>
           </div>
 
           {/* Detail Work */}
-          <div>
+          <div className="col-span-2">
             <label className="block text-sm font-medium text-gray-600 md:hidden mb-1">
               Chi tiết công việc
             </label>
             <textarea
               placeholder="Chi tiết công việc"
               className="border rounded p-2 resize-y min-h-[60px] w-full"
+              value={weekData[index]?.work || ""}
+              onChange={(e) => handleChange(index, "work", e.target.value)}
             ></textarea>
           </div>
 
@@ -105,6 +191,10 @@ const Calendar = () => {
               type="number"
               placeholder="Số cửa hàng"
               className="border rounded p-2 w-full"
+              value={weekData[index]?.storeNumber || ""}
+              onChange={(e) =>
+                handleChange(index, "storeNumber", e.target.value)
+              }
             />
           </div>
 
@@ -117,10 +207,15 @@ const Calendar = () => {
               type="number"
               placeholder="Số siêu thị"
               className="border rounded p-2 w-full"
+              value={weekData[index]?.martNumber || ""}
+              onChange={(e) =>
+                handleChange(index, "martNumber", e.target.value)
+              }
             />
           </div>
         </div>
       ))}
+      {loading && <LoadingModal message={"Loading..."} />}
     </div>
   );
 };

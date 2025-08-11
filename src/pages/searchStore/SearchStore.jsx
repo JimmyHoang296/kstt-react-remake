@@ -1,6 +1,6 @@
 import React from 'react'
 import { useState } from 'react';
-import { mockData } from '../../assets/mockData';
+import { mockData } from '../../assets/mockData.js';
 // Search Component
 const SearchStore = () => {
   const [shops, setShops] = useState(mockData.shops);

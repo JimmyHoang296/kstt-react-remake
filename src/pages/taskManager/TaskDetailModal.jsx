@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { response } from '../../assets/mockData';
+import { response } from '../../assets/mockData.js';
 import { Save, Trash } from 'lucide-react';
 import { getTodayDateString } from '../../assets/helpers';
 // Task Detail Modal Component

@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { Eye, Plus } from "lucide-react";
-import { response } from "../../assets/mockData";
+import { response } from "../../assets/mockData.js";
 import { toDateInputValue } from "../../assets/helpers";
 import { URL } from "../../assets/variables";
 import TaskDetailModal from "./TaskDetailModal";
@@ -18,6 +18,9 @@ const TaskManager = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [selectedTask, setSelectedTask] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const tasksPerPage = 20;
+
   const handleSearchChange = (e) => {
     const name = e.target.name;
     setSearchQuery({ ...searchQuery, [name]: e.target.value });
@@ -62,7 +65,9 @@ const TaskManager = () => {
       const result = await response.json(); // Assuming response is JSON
       if (result.success) {
         // update to local
-        setTasks(tasks.map(task => task.id===updatedTask.id?updatedTask:task));
+        setTasks(
+          tasks.map((task) => (task.id === updatedTask.id ? updatedTask : task))
+        );
         handleCloseModal();
       }
     } catch (error) {
@@ -146,8 +151,6 @@ const TaskManager = () => {
       setLoading(false);
     }
   }
-  const [currentPage, setCurrentPage] = useState(1);
-  const tasksPerPage = 20;
 
   // Compute paginated tasks
   const paginatedTasks = useMemo(() => {
@@ -189,13 +192,17 @@ const TaskManager = () => {
 
           <div>
             <label className="block text-gray-700 text-sm mb-1">Status</label>
-            <input
-              type="text"
+            <select
               name="status"
               value={searchQuery.status}
               onChange={handleSearchChange}
               className="w-full p-2 border rounded-md"
-            />
+            >
+              <option></option>
+              <option>Đang xử lý</option>
+              <option>Hoàn thành</option>
+              <option>Đóng khác</option>
+            </select>
           </div>
 
           <div>
