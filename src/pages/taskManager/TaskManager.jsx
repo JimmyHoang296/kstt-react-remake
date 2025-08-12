@@ -334,7 +334,7 @@ const TaskManager = ({data}) => {
                 <span className="text-xs font-semibold text-gray-500">
                   Start Date:
                 </span>
-                <p className="text-sm">{task.startDate}</p>
+                <p className="text-sm">{toDateInputValue (task.startDate)}</p>
               </div>
               <div className="flex justify-end">
                 <button

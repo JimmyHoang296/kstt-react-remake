@@ -33,7 +33,6 @@ const Login = ({ setIsLogin, setData }) => {
         // update to local
         setData(result.data);
         setIsLogin(true);
-        handleCloseModal();
       } else {
         alert("Thông tin đăng nhập sai");
       }

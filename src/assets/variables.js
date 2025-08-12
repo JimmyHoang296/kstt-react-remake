@@ -1,1 +1,1 @@
-export const URL = 'https://script.google.com/macros/s/AKfycbyBOVBTfEwCEakPUv1H8yNe_TeKYLWAWRv2CT5ZVnry4E2Vp0gsUQgpISzSQMc1RrYa/exec'
+export const URL = 'https://script.google.com/macros/s/AKfycbwdsZXD-8zuHDdK9S61wEjKmCgAmYc8yNPnUEQlf5TsjfUfx0AWDukxSUl08v8MrCky/exec'

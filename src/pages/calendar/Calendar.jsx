@@ -32,14 +32,16 @@ const Calendar = ({data}) => {
 
     const newWeekData = {};
     weekdays.forEach((day, index) => {
-      const match = calendar.find(
-        (item) => new Date(item.date).toDateString() === day.toDateString()
-      );
-      newWeekData[index] = {
-        work: match?.work ?? "",
-        storeNumber: match?.storeNumber ?? "",
-        martNumber: match?.martNumber ?? "",
-      };
+      if (calendar.length){
+        const match = calendar.find(
+          (item) => new Date(item.date).toDateString() === day.toDateString()
+        );
+        newWeekData[index] = {
+          work: match?.work ?? "",
+          storeNumber: match?.storeNumber ?? "",
+          martNumber: match?.martNumber ?? "",
+        };
+      }
     });
 
     setWeekData(newWeekData);
