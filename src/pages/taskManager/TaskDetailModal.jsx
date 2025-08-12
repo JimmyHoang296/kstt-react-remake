@@ -1,9 +1,8 @@
 import React, { useEffect, useState } from 'react'
-import { response } from '../../assets/mockData.js';
 import { Save, Trash } from 'lucide-react';
-import { getTodayDateString } from '../../assets/helpers';
+import { getTodayDateString, toDateInputValue } from '../../assets/helpers';
 // Task Detail Modal Component
-const TaskDetailModal = ({ task, onClose, onSave, onUpdate, onDelete }) => {
+const TaskDetailModal = ({ data,task, onClose, onSave, onUpdate, onDelete }) => {
     const [formData, setFormData] = useState( task || {
         id: "",
         email: "",
@@ -13,7 +12,7 @@ const TaskDetailModal = ({ task, onClose, onSave, onUpdate, onDelete }) => {
         source: "",
         sap: "",
         store: "",
-        pic: response.user.name,
+        pic: data.user.name,
         startDate: getTodayDateString(),
         endDate: "",
         group: "",
@@ -89,7 +88,7 @@ const TaskDetailModal = ({ task, onClose, onSave, onUpdate, onDelete }) => {
                                 onChange={handleInputChange}
                                 className="w-full p-2 border rounded-md"
                             >
-                                {response.emps.map((emp, id) => <option key={id}>{emp}</option>)}
+                                {data.emps.map((emp, id) => <option key={id}>{emp}</option>)}
                             </select>
                         </div>
                         <div>
@@ -178,7 +177,7 @@ const TaskDetailModal = ({ task, onClose, onSave, onUpdate, onDelete }) => {
                             <input
                                 type="date"
                                 name="startDate"
-                                value={formData.startDate}
+                                value={toDateInputValue( formData.startDate)}
                                 onChange={handleInputChange}
                                 className="w-full p-2 border rounded-md"
                             />
@@ -190,7 +189,7 @@ const TaskDetailModal = ({ task, onClose, onSave, onUpdate, onDelete }) => {
                             <input
                                 type="date"
                                 name="endDate"
-                                value={formData.endDate}
+                                value={toDateInputValue( formData.endDate)}
                                 onChange={handleInputChange}
                                 className="w-full p-2 border rounded-md"
                             />
@@ -199,13 +198,19 @@ const TaskDetailModal = ({ task, onClose, onSave, onUpdate, onDelete }) => {
                             <label className="block text-gray-700 text-sm mb-1">
                                 Nhóm lỗi vi phạm
                             </label>
-                            <input
-                                type="text"
+                            <select
                                 name="group"
                                 value={formData.group}
                                 onChange={handleInputChange}
                                 className="w-full p-2 border rounded-md"
-                            />
+                                >
+                                <option></option>
+                                <option>Nhóm 1</option>
+                                <option>Nhóm 2</option>
+                                <option>Nhóm 3</option>
+                                <option>Nhóm 4</option>
+                                <option>Nhóm 5</option>
+                            </select>
                         </div>
                         <div>
                             <label className="block text-gray-700 text-sm mb-1">

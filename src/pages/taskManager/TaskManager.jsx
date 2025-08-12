@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Eye, Plus } from "lucide-react";
-import { response } from "../../assets/mockData.js";
 import { toDateInputValue } from "../../assets/helpers";
 import { URL } from "../../assets/variables";
 import TaskDetailModal from "./TaskDetailModal";
@@ -8,8 +7,8 @@ import Pagination from "./Pagination";
 import LoadingModal from "../../components/LoadingModal";
 
 // Task Management Component (CRUD)
-const TaskManager = () => {
-  const [tasks, setTasks] = useState(response.caseObj);
+const TaskManager = ({data}) => {
+  const [tasks, setTasks] = useState(data.caseObj);
   const [searchQuery, setSearchQuery] = useState({
     email: "",
     status: "",
@@ -359,6 +358,7 @@ const TaskManager = () => {
 
       {isModalOpen && (
         <TaskDetailModal
+        data={data}
           task={selectedTask}
           onClose={handleCloseModal}
           onSave={handleSaveNewTask}

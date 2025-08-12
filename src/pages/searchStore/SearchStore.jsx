@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import LoadingModal from '../../components/LoadingModal';
 
 const URL =
   'https://script.google.com/macros/s/AKfycbzpnjGlXSJheKpWsN9C-YqD5npxEF07yIiz3WTDAh3xFFmjDFHovVY7uSVDBmh4xjMu/exec';
@@ -13,10 +14,10 @@ const SearchStore = () => {
 
   const handleSearch = async () => {
     if (!site && !siteName && !siteAdd) {
-      setError('Nhập thông tin để tìm kiếm');
+      alert('Nhập thông tin tìm kiếm')
       return;
     }
-    setError('');
+    
     setLoading(true);
 
     try {
@@ -78,12 +79,6 @@ const SearchStore = () => {
         Tìm kiếm
       </button>
 
-      {/* Error message */}
-      {error && <p className="text-red-500 mt-2">{error}</p>}
-
-      {/* Loading */}
-      {loading && <p className="mt-4">Đang tải...</p>}
-
       {/* Results */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
         {results.length > 0 ? (
@@ -123,6 +118,7 @@ const SearchStore = () => {
           !loading && <p className="text-gray-500">Không tìm thấy cửa hàng nào.</p>
         )}
       </div>
+      {loading && <LoadingModal message={"loading..."}/>}
     </div>
   );
 };

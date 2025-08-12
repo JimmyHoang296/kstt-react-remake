@@ -1,18 +1,17 @@
 import React, { useState, useEffect } from "react";
 import { ChevronLeft } from "lucide-react";
-import { response } from "../../assets/mockData";
 import LoadingModal from "../../components/LoadingModal";
 import { URL } from "../../assets/variables";
 
 // your provided data
 
-const Calendar = () => {
+const Calendar = ({data}) => {
   const [currentWeekStart, setCurrentWeekStart] = useState(new Date());
   const [weekData, setWeekData] = useState({});
   const [isChanged, setIsChanged] = useState(false);
   const [loading, setLoading] = useState(false);
-  const { id: user, name } = response.user;
-  const [calendar, setCalendar] = useState(response.calendar);
+  const { id: user, name } = data.user;
+  const [calendar, setCalendar] = useState(data.calendar);
   const getWeekDays = (startOfWeek) => {
     const days = [];
     let day = new Date(startOfWeek);
