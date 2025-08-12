@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Eye, Plus } from "lucide-react";
 import { response } from "../../assets/mockData.js";
 import { toDateInputValue } from "../../assets/helpers";
@@ -18,24 +18,32 @@ const TaskManager = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [selectedTask, setSelectedTask] = useState(null);
+  const [filteredTasks, setFilteredTasks] = useState(tasks);
   const [currentPage, setCurrentPage] = useState(1);
   const tasksPerPage = 20;
 
   const handleSearchChange = (e) => {
     const name = e.target.name;
     setSearchQuery({ ...searchQuery, [name]: e.target.value });
+    setCurrentPage(1)
   };
-
-  const filteredTasks = tasks.filter(
-    (task) =>
-      (!searchQuery.email ||
-        task.email.toLowerCase().includes(searchQuery.email.toLowerCase())) &&
-      (!searchQuery.pic ||
-        task.pic.toLowerCase().includes(searchQuery.pic.toLowerCase())) &&
-      (!searchQuery.status ||
-        task.status.toLowerCase().includes(searchQuery.status.toLowerCase()))
-  );
-
+  useEffect(() => {
+    setFilteredTasks(
+      tasks.filter(
+        (task) =>
+          (!searchQuery.email ||
+            task.email
+              .toLowerCase()
+              .includes(searchQuery.email.toLowerCase())) &&
+          (!searchQuery.pic ||
+            task.pic.toLowerCase().includes(searchQuery.pic.toLowerCase())) &&
+          (!searchQuery.status ||
+            task.status
+              .toLowerCase()
+              .includes(searchQuery.status.toLowerCase()))
+      )
+    );
+  }, [searchQuery, tasks]);
   const handleOpenModal = (task) => {
     setSelectedTask(task);
     setIsModalOpen(true);
@@ -155,7 +163,7 @@ const TaskManager = () => {
   // Compute paginated tasks
   const paginatedTasks = useMemo(() => {
     const startIndex = (currentPage - 1) * tasksPerPage;
-    return filteredTasks.slice(startIndex, startIndex + tasksPerPage);
+    return filteredTasks.reverse().slice(startIndex, startIndex + tasksPerPage);
   }, [filteredTasks, currentPage]);
 
   const totalPages = Math.ceil(filteredTasks.length / tasksPerPage);
