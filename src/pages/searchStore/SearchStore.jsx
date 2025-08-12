@@ -10,7 +10,6 @@ const SearchStore = () => {
   const [siteAdd, setSiteAdd] = useState('');
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
 
   const handleSearch = async () => {
     if (!site && !siteName && !siteAdd) {
@@ -36,7 +35,7 @@ const SearchStore = () => {
       setResults(data.result || []);
     } catch (err) {
       console.error(err);
-      setError('Có lỗi xảy ra, hãy thử lại');
+      alert('Có lỗi xảy ra, hãy thử lại');
     } finally {
       setLoading(false);
     }

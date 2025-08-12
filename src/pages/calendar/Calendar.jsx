@@ -5,7 +5,7 @@ import { URL } from "../../assets/variables";
 
 // your provided data
 
-const Calendar = ({data}) => {
+const Calendar = ({ data }) => {
   const [currentWeekStart, setCurrentWeekStart] = useState(new Date());
   const [weekData, setWeekData] = useState({});
   const [isChanged, setIsChanged] = useState(false);
@@ -32,7 +32,7 @@ const Calendar = ({data}) => {
 
     const newWeekData = {};
     weekdays.forEach((day, index) => {
-      if (calendar.length){
+      if (calendar.length) {
         const match = calendar.find(
           (item) => new Date(item.date).toDateString() === day.toDateString()
         );
@@ -154,7 +154,7 @@ const Calendar = ({data}) => {
   return (
     <div className="bg-white rounded-xl shadow-md p-6">
       {/* Header */}
-      <h2 className="text-2xl font-bold">Lịch làm việc</h2>
+      <h2 className="text-2xl font-bold mb-3">Lịch làm việc</h2>
       <div className="flex space-x-2 items-center justify-between mb-4">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
           <button
@@ -163,24 +163,26 @@ const Calendar = ({data}) => {
           >
             Tuần này
           </button>
-          <button
-            onClick={handlePreviousWeek}
-            className="p-2 rounded-full hover:bg-gray-200"
-          >
-            <ChevronLeft className="w-5 h-5" />
-          </button>
+          <div className="flex items-center">
+            <button
+              onClick={handlePreviousWeek}
+              className="p-2 rounded-full hover:bg-gray-200"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
 
-          <span className="font-semibold text-lg">
-            {weekdays[0].toLocaleDateString()} -{" "}
-            {weekdays[4].toLocaleDateString()}
-          </span>
+            <span className="font-semibold text-lg">
+              {weekdays[0].toLocaleDateString()} -{" "}
+              {weekdays[4].toLocaleDateString()}
+            </span>
 
-          <button
-            onClick={handleNextWeek}
-            className="p-2 rounded-full hover:bg-gray-200"
-          >
-            <ChevronLeft className="w-5 h-5 rotate-180" />
-          </button>
+            <button
+              onClick={handleNextWeek}
+              className="p-2 rounded-full hover:bg-gray-200"
+            >
+              <ChevronLeft className="w-5 h-5 rotate-180" />
+            </button>
+          </div>
         </div>
         <button
           onClick={handleUpdate}
@@ -202,9 +204,9 @@ const Calendar = ({data}) => {
       {weekdays.map((day, index) => (
         <div
           key={index}
-          className="grid grid-cols-1 md:grid-cols-5 gap-4 items-start mb-4 border-b pb-4 md:border-0 md:pb-0"
+          className="grid grid-cols-2 md:grid-cols-5 gap-4 items-start mb-4 border-b pb-4 md:border-0 md:pb-0"
         >
-          <div>
+          <div className="flex gap-2 items-baseline">
             <p className="font-bold">
               {day.toLocaleDateString("vi-VN", { weekday: "long" })}
             </p>
