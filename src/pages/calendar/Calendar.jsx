@@ -1,20 +1,23 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { ChevronLeft } from "lucide-react";
 import { response } from "../../assets/mockData";
 import LoadingModal from "../../components/LoadingModal";
 import { URL } from "../../assets/variables";
 
+// your provided data
+
 const Calendar = ({ onSubmit }) => {
   const [currentWeekStart, setCurrentWeekStart] = useState(new Date());
-  const [weekData, setWeekData] = useState({}); // { index: { work, storeNumber, martNumber } }
+  const [weekData, setWeekData] = useState({});
   const [isChanged, setIsChanged] = useState(false);
   const [loading, setLoading] = useState(false);
   const { id: user, name } = response.user;
+  const [calendar, setCalendar] = useState(response.calendar) 
   const getWeekDays = (startOfWeek) => {
     const days = [];
     let day = new Date(startOfWeek);
     const dayOfWeek = day.getDay();
-    const diff = day.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1); // Monday start
+    const diff = day.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
     day.setDate(diff);
 
     for (let i = 0; i < 5; i++) {
@@ -23,6 +26,25 @@ const Calendar = ({ onSubmit }) => {
     }
     return days;
   };
+
+  // ✅ fill weekData when currentWeekStart changes
+  useEffect(() => {
+    const weekdays = getWeekDays(currentWeekStart);
+
+    const newWeekData = {};
+    weekdays.forEach((day, index) => {
+      const match = calendar.find(
+        (item) => new Date(item.date).toDateString() === day.toDateString()
+      );
+      newWeekData[index] = {
+        work: match?.work ?? "",
+        storeNumber: match?.storeNumber ?? "",
+        martNumber: match?.martNumber ?? "",
+      };
+    });
+
+    setWeekData(newWeekData);
+  }, [currentWeekStart]);
 
   const handlePreviousWeek = () => {
     if (isChanged && confirm("Bạn có muốn lưu lại thay đổi vừa rồi")) {
@@ -70,7 +92,7 @@ const Calendar = ({ onSubmit }) => {
 
   const handleUpdate = async () => {
     const submitArray = weekdays.map((day, index) => ({
-      date: day.toISOString().split("T")[0], // format YYYY-MM-DD
+      date: day.toISOString().split("T")[0],
       user,
       name,
       work: weekData[index]?.work || "",
@@ -78,11 +100,11 @@ const Calendar = ({ onSubmit }) => {
       martNumber: weekData[index]?.martNumber || "",
     }));
 
-    // update to dtbase
     const submitData = {
       type: "updateWork",
       data: submitArray,
     };
+    console.log(JSON.stringify(submitData));
     try {
       setLoading(true);
       const response = await fetch(URL, {
@@ -90,18 +112,36 @@ const Calendar = ({ onSubmit }) => {
         headers: {
           "Content-Type": "text/plain;charset=utf-8",
         },
-        body: JSON.stringify(submitData), // body data type must match "Content-Type" header
+        body: JSON.stringify(submitData),
       });
 
-      const result = await response.json(); // Assuming response is JSON
-      if (result.success) {
-        setIsChanged(false);
+      const result = await response.json();
 
+      if (result.success) {
         // update to local
+        submitArray.forEach((dayData) => {
+          const newCalendar = [...calendar]
+          const idx = calendar.findIndex(
+            (item) =>
+              new Date(item.date).toDateString() ===
+                new Date(dayData.date).toDateString() &&
+              item.user === dayData.user
+          );
+          if (idx !== -1) {
+            console.log(true);
+            newCalendar[idx] = { ...calendar[idx], ...dayData };
+            setCalendar(newCalendar)
+          }else{
+            const newCalendar = calendar.push(dayData)
+            setCalendar(newCalendar)
+          }
+        });
+
+        setIsChanged(false);
       }
     } catch (error) {
       console.error("Error sending request:", error);
-      return { success: false, error: error.message }; // Return error object
+      return { success: false, error: error.message };
     } finally {
       setLoading(false);
     }
@@ -138,7 +178,6 @@ const Calendar = ({ onSubmit }) => {
             <ChevronLeft className="w-5 h-5 rotate-180" />
           </button>
         </div>
-        {/* Update Button */}
         <button
           onClick={handleUpdate}
           className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
@@ -147,7 +186,7 @@ const Calendar = ({ onSubmit }) => {
         </button>
       </div>
 
-      {/* Table header for desktop only */}
+      {/* Table header */}
       <div className="hidden md:grid md:grid-cols-5 gap-4 font-bold border-b pb-2 mb-2">
         <div>Ngày</div>
         <div className="col-span-2">Chi tiết công việc</div>
@@ -161,7 +200,6 @@ const Calendar = ({ onSubmit }) => {
           key={index}
           className="grid grid-cols-1 md:grid-cols-5 gap-4 items-start mb-4 border-b pb-4 md:border-0 md:pb-0"
         >
-          {/* Date */}
           <div>
             <p className="font-bold">
               {day.toLocaleDateString("vi-VN", { weekday: "long" })}
@@ -169,11 +207,7 @@ const Calendar = ({ onSubmit }) => {
             <p className="text-sm text-gray-500">{day.toLocaleDateString()}</p>
           </div>
 
-          {/* Detail Work */}
           <div className="col-span-2">
-            <label className="block text-sm font-medium text-gray-600 md:hidden mb-1">
-              Chi tiết công việc
-            </label>
             <textarea
               placeholder="Chi tiết công việc"
               className="border rounded p-2 resize-y min-h-[60px] w-full"
@@ -182,11 +216,7 @@ const Calendar = ({ onSubmit }) => {
             ></textarea>
           </div>
 
-          {/* Store Number */}
           <div>
-            <label className="block text-sm font-medium text-gray-600 md:hidden mb-1">
-              Số cửa hàng
-            </label>
             <input
               type="number"
               placeholder="Số cửa hàng"
@@ -198,11 +228,7 @@ const Calendar = ({ onSubmit }) => {
             />
           </div>
 
-          {/* Mart Number */}
           <div>
-            <label className="block text-sm font-medium text-gray-600 md:hidden mb-1">
-              Số siêu thị
-            </label>
             <input
               type="number"
               placeholder="Số siêu thị"
