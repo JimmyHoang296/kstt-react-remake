@@ -7,7 +7,7 @@ import Pagination from "./Pagination";
 import LoadingModal from "../../components/LoadingModal";
 
 // Task Management Component (CRUD)
-const TaskManager = ({data}) => {
+const TaskManager = ({ data, setData }) => {
   const [tasks, setTasks] = useState(data.caseObj);
   const [searchQuery, setSearchQuery] = useState({
     email: "",
@@ -24,7 +24,7 @@ const TaskManager = ({data}) => {
   const handleSearchChange = (e) => {
     const name = e.target.name;
     setSearchQuery({ ...searchQuery, [name]: e.target.value });
-    setCurrentPage(1)
+    setCurrentPage(1);
   };
   useEffect(() => {
     setFilteredTasks(
@@ -43,6 +43,9 @@ const TaskManager = ({data}) => {
       )
     );
   }, [searchQuery, tasks]);
+  useEffect(() => {
+    setData((prev) => ({ ...prev, ["caseObj"]: tasks }));
+  }, [tasks]);
   const handleOpenModal = (task) => {
     setSelectedTask(task);
     setIsModalOpen(true);
@@ -334,7 +337,7 @@ const TaskManager = ({data}) => {
                 <span className="text-xs font-semibold text-gray-500">
                   Start Date:
                 </span>
-                <p className="text-sm">{toDateInputValue (task.startDate)}</p>
+                <p className="text-sm">{toDateInputValue(task.startDate)}</p>
               </div>
               <div className="flex justify-end">
                 <button
@@ -358,7 +361,7 @@ const TaskManager = ({data}) => {
 
       {isModalOpen && (
         <TaskDetailModal
-        data={data}
+          data={data}
           task={selectedTask}
           onClose={handleCloseModal}
           onSave={handleSaveNewTask}

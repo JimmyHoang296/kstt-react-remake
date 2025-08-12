@@ -5,7 +5,7 @@ import { URL } from "../../assets/variables";
 
 // your provided data
 
-const Calendar = ({ data }) => {
+const Calendar = ({ data,setData }) => {
   const [currentWeekStart, setCurrentWeekStart] = useState(new Date());
   const [weekData, setWeekData] = useState({});
   const [isChanged, setIsChanged] = useState(false);
@@ -47,6 +47,9 @@ const Calendar = ({ data }) => {
     setWeekData(newWeekData);
   }, [currentWeekStart]);
 
+  useEffect(() => {
+    setData((prev) => ({ ...prev, ["calendar"]: calendar }));
+  }, [calendar]);
   const handlePreviousWeek = () => {
     if (isChanged && confirm("Bạn có muốn lưu lại thay đổi vừa rồi")) {
       handleUpdate();

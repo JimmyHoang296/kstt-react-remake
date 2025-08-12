@@ -20,11 +20,11 @@ const App = () => {
   const renderContent = () => {
     switch (currentPage) {
       case "dashboard":
-        return <Dashboard data={data}/>;
+        return <Dashboard data={data} />;
       case "task-management":
-        return <TaskManager data={data} />;
+        return <TaskManager data={data} setData={setData}/>;
       case "calendar":
-        return <Calendar data={data}/>;
+        return <Calendar data={data} setData={setData}/>;
       case "search":
         return <SearchStore />;
       default:
