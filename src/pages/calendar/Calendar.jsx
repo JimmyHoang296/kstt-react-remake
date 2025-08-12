@@ -6,13 +6,13 @@ import { URL } from "../../assets/variables";
 
 // your provided data
 
-const Calendar = ({ onSubmit }) => {
+const Calendar = () => {
   const [currentWeekStart, setCurrentWeekStart] = useState(new Date());
   const [weekData, setWeekData] = useState({});
   const [isChanged, setIsChanged] = useState(false);
   const [loading, setLoading] = useState(false);
   const { id: user, name } = response.user;
-  const [calendar, setCalendar] = useState(response.calendar) 
+  const [calendar, setCalendar] = useState(response.calendar);
   const getWeekDays = (startOfWeek) => {
     const days = [];
     let day = new Date(startOfWeek);
@@ -104,7 +104,7 @@ const Calendar = ({ onSubmit }) => {
       type: "updateWork",
       data: submitArray,
     };
-    console.log(JSON.stringify(submitData));
+
     try {
       setLoading(true);
       const response = await fetch(URL, {
@@ -119,22 +119,25 @@ const Calendar = ({ onSubmit }) => {
 
       if (result.success) {
         // update to local
-        submitArray.forEach((dayData) => {
-          const newCalendar = [...calendar]
-          const idx = calendar.findIndex(
-            (item) =>
-              new Date(item.date).toDateString() ===
-                new Date(dayData.date).toDateString() &&
-              item.user === dayData.user
-          );
-          if (idx !== -1) {
-            console.log(true);
-            newCalendar[idx] = { ...calendar[idx], ...dayData };
-            setCalendar(newCalendar)
-          }else{
-            const newCalendar = calendar.push(dayData)
-            setCalendar(newCalendar)
-          }
+        setCalendar((prevCalendar) => {
+          let updatedCalendar = [...prevCalendar];
+
+          submitArray.forEach((dayData) => {
+            const idx = updatedCalendar.findIndex(
+              (item) =>
+                new Date(item.date).toDateString() ===
+                  new Date(dayData.date).toDateString() &&
+                item.user === dayData.user
+            );
+
+            if (idx !== -1) {
+              updatedCalendar[idx] = { ...updatedCalendar[idx], ...dayData };
+            } else {
+              updatedCalendar.push(dayData);
+            }
+          });
+
+          return updatedCalendar;
         });
 
         setIsChanged(false);
