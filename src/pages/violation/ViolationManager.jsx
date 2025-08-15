@@ -1,24 +1,22 @@
-
 import React, { useEffect, useMemo, useState } from "react";
 import { Eye, Plus } from "lucide-react";
 import { toDateInputValue } from "../../assets/helpers";
 import { URL } from "../../assets/variables";
-import TaskDetailModal from "./TaskDetailModal";
 import Pagination from "../../components/Pagination";
 import LoadingModal from "../../components/LoadingModal";
+import ViolationDetailModal from "./ViolationDetailModal";
 
 // Task Management Component (CRUD)
-const TaskManager = ({ data, setData }) => {
-  const [tasks, setTasks] = useState(data.caseObj);
+const ViolationManager = ({ data, setData }) => {
+  const [violations, setViolations] = useState(data.violations);
   const [searchQuery, setSearchQuery] = useState({
-    email: "",
-    status: "",
-    pic: "",
+    sap: "",
+    audit: "",
   });
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [selectedTask, setSelectedTask] = useState(null);
-  const [filteredTasks, setFilteredTasks] = useState(tasks);
+  const [filteredTasks, setFilteredTasks] = useState(violations);
   const [currentPage, setCurrentPage] = useState(1);
   const tasksPerPage = 20;
 
@@ -29,7 +27,7 @@ const TaskManager = ({ data, setData }) => {
   };
   useEffect(() => {
     setFilteredTasks(
-      tasks.filter(
+      violations.filter(
         (task) =>
           (!searchQuery.email ||
             task.email
@@ -43,10 +41,10 @@ const TaskManager = ({ data, setData }) => {
               .includes(searchQuery.status.toLowerCase()))
       )
     );
-  }, [searchQuery, tasks]);
+  }, [searchQuery, violations]);
   useEffect(() => {
-    setData((prev) => ({ ...prev, ["caseObj"]: tasks }));
-  }, [tasks]);
+    setData((prev) => ({ ...prev, ["caseObj"]: violations }));
+  }, [violations]);
   const handleOpenModal = (task) => {
     setSelectedTask(task);
     setIsModalOpen(true);
@@ -77,7 +75,7 @@ const TaskManager = ({ data, setData }) => {
       if (result.success) {
         // update to local
         setTasks(
-          tasks.map((task) => (task.id === updatedTask.id ? updatedTask : task))
+          violations.map((task) => (task.id === updatedTask.id ? updatedTask : task))
         );
         handleCloseModal();
       }
@@ -110,7 +108,7 @@ const TaskManager = ({ data, setData }) => {
       if (result.success) {
         // delete in local
         setTasks((prev) => prev.filter((task) => task.id !== taskId));
-        // setTasks([...tasks, { ...newTask, id: tasks.length + 1 }]);
+        // setTasks([...violations, { ...newTask, id: violations.length + 1 }]);
         handleCloseModal();
       }
     } catch (error) {
@@ -122,7 +120,7 @@ const TaskManager = ({ data, setData }) => {
   }
 
   // Add functionality for creating a new task
-  const handleAddNewTask = () => {
+  const handleAddNewViolation = () => {
     setSelectedTask(null); // Open modal with empty form for new task
     setIsModalOpen(true);
   };
@@ -151,8 +149,8 @@ const TaskManager = ({ data, setData }) => {
       if (result.success) {
         // update to local
         newTask.id = result.data;
-        setTasks([...tasks, newTask]);
-        // setTasks([...tasks, { ...newTask, id: tasks.length + 1 }]);
+        setTasks([...violations, newTask]);
+        // setTasks([...violations, { ...newTask, id: violations.length + 1 }]);
         handleCloseModal();
       }
     } catch (error) {
@@ -163,7 +161,7 @@ const TaskManager = ({ data, setData }) => {
     }
   }
 
-  // Compute paginated tasks
+  // Compute paginated violations
   const paginatedTasks = useMemo(() => {
     const startIndex = (currentPage - 1) * tasksPerPage;
     return filteredTasks.reverse().slice(startIndex, startIndex + tasksPerPage);
@@ -175,26 +173,26 @@ const TaskManager = ({ data, setData }) => {
     <div className="p-6 bg-white rounded-xl shadow-md">
       {/* Header */}
       <div className="mb-6 border-b pb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <h2 className="text-2xl font-bold text-gray-800">Quản lý Sự vụ</h2>
+        <h2 className="text-2xl font-bold text-gray-800">Tổng hợp ghi nhận</h2>
         <button
-          onClick={handleAddNewTask}
+          onClick={handleAddNewViolation}
           className="bg-indigo-500 text-white px-4 py-2 rounded-lg hover:bg-indigo-600 transition-colors flex items-center justify-center"
         >
-          <Plus className="mr-2" /> Thêm sự vụ
+          <Plus className="mr-2" /> Ghi nhận mới
         </button>
       </div>
 
       {/* Search section */}
       <div className="mb-2">
-        <h3 className="text-xl font-bold mb-2">Tìm kiếm sự vụ</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+        <h3 className="text-xl font-bold mb-2">Tìm ghi nhận</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
           <div>
             <label className="block text-gray-700 text-sm mb-1">
-              Tiêu đề email
+              Mã CH
             </label>
             <input
               type="text"
-              name="email"
+              name="sap"
               value={searchQuery.email}
               onChange={handleSearchChange}
               className="w-full p-2 border rounded-md"
@@ -202,26 +200,11 @@ const TaskManager = ({ data, setData }) => {
           </div>
 
           <div>
-            <label className="block text-gray-700 text-sm mb-1">Status</label>
-            <select
-              name="status"
-              value={searchQuery.status}
-              onChange={handleSearchChange}
-              className="w-full p-2 border rounded-md"
-            >
-              <option></option>
-              <option>Đang xử lý</option>
-              <option>Hoàn thành</option>
-              <option>Đóng khác</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-gray-700 text-sm mb-1">PIC</label>
+            <label className="block text-gray-700 text-sm mb-1">Đợt kiểm tra</label>
             <input
               type="text"
-              name="pic"
-              value={searchQuery.pic}
+              name="audit"
+              value={searchQuery.audit}
               onChange={handleSearchChange}
               className="w-full p-2 border rounded-md"
             />
@@ -241,7 +224,7 @@ const TaskManager = ({ data, setData }) => {
       {/* Task List Section */}
       <div className="pt-4">
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-xl font-bold">Danh sách sự vụ</h3>
+          <h3 className="text-xl font-bold">Danh sách ghi nhận</h3>
         </div>
 
         {/* Table view for desktop */}
@@ -250,16 +233,16 @@ const TaskManager = ({ data, setData }) => {
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">
-                  Email
+                  Đợt kiểm tra
                 </th>
                 <th className="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">
-                  Status
+                  Ngày kiểm tra
                 </th>
                 <th className="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">
-                  PIC
+                  Mã CH
                 </th>
                 <th className="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">
-                  Start Date
+                  Tên CH
                 </th>
                 <th className="px-4 py-3 text-center font-medium text-gray-500 uppercase tracking-wider">
                   Hành động
@@ -269,22 +252,12 @@ const TaskManager = ({ data, setData }) => {
             <tbody className="bg-white divide-y divide-gray-200">
               {paginatedTasks.map((task) => (
                 <tr key={task.id}>
-                  <td className="px-4 py-3 max-w-80 text-wrap">{task.email}</td>
-                  <td className="px-4 py-3 ">
-                    <span
-                      className={`px-2 inline-flex text-center text-xs leading-5 font-semibold rounded-full ${
-                        task.status === "Đang xử lý"
-                          ? "bg-yellow-100 text-yellow-800"
-                          : "bg-green-100 text-green-800"
-                      }`}
-                    >
-                      {task.status}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 ">{task.pic}</td>
-                  <td className="px-4 py-3 ">
-                    {toDateInputValue(task.startDate)}
-                  </td>
+                  <td className="px-4 py-3 max-w-80 text-wrap">{task.audit}</td>
+                  <td className="px-4 py-3 ">{toDateInputValue(task.date)}</td>
+                  <td className="px-4 py-3 ">{task.sap}</td>
+                  <td className="px-4 py-3 ">{task.store}</td>
+                  <td className="px-4 py-3 "></td>
+                  
                   <td className="px-4 py-3  text-center">
                     <button
                       onClick={() => handleOpenModal(task)}
@@ -361,7 +334,7 @@ const TaskManager = ({ data, setData }) => {
       </div>
 
       {isModalOpen && (
-        <TaskDetailModal
+        <ViolationDetailModal
           data={data}
           task={selectedTask}
           onClose={handleCloseModal}
@@ -375,4 +348,4 @@ const TaskManager = ({ data, setData }) => {
   );
 };
 
-export default TaskManager;
+export default ViolationManager;

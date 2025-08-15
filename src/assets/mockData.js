@@ -1,10 +1,226 @@
 
-export const response = {
+export const mockdata = {
   user: {
     id: "ngocbb",
     name: "Bùi Bích Ngọc",
     role: "emp",
     hod: "Hoàng Dương Dũng",
+  },
+
+  violations: [
+    {
+      id: "V1",
+      audit:"Vùng Hải Phòng",
+      kstt: "Lê Thế Luật",
+      date: "2025-08-15",
+      sap: "2011",
+      store: "almaz",
+      violations: [
+        {
+          vId: "V1_1",
+          violation: "Quên không rửa tay",
+          empId: "123",
+          empName: "ABC",
+          rank: "5",
+          title: "NVBH",
+          group:"Nhóm 3",
+          type:"N3-abc",
+          type2:"type2",
+          conclusion: "Chị ABC đã quên rửa tay",
+          penalty: "Không được hưởng 20% thưởng YTCLCV"
+        },
+        {
+          vId: "V1_2",
+          violation: "Quên không rửa tay",
+          empId: "123",
+          empName: "ABC",
+          rank: "5",
+          title: "NVBH",
+          group:"Nhóm 3",
+          type:"N3-abc",
+          type2:"type2",
+          conclusion: "Chị ABC đã quên rửa tay",
+          penalty: "Không được hưởng 20% thưởng YTCLCV"
+        },
+        {
+          vId: "V1_3",
+          violation: "Quên không rửa tay",
+          empId: "123",
+          empName: "ABC",
+          rank: "5",
+          title: "NVBH",
+          group:"Nhóm 3",
+          type:"N3-abc",
+          type2:"type2",
+          conclusion: "Chị ABC đã quên rửa tay",
+          penalty: "Không được hưởng 20% thưởng YTCLCV"
+        },
+        {
+          vId: "V1_4",
+          violation: "Quên không rửa tay",
+          empId: "123",
+          empName: "ABC",
+          rank: "5",
+          title: "NVBH",
+          group:"Nhóm 3",
+          type:"N3-abc",
+          type2:"type2",
+          conclusion: "Chị ABC đã quên rửa tay",
+          penalty: "Không được hưởng 20% thưởng YTCLCV"
+        }
+      ]
+    },
+    {
+      id: "V2",
+      audit:"Vùng Hải Phòng",
+      kstt: "Lê Thế Luật",
+      date: "2025-08-15",
+      sap: "2011",
+      store: "almaz",
+      violations: [
+        {
+          vId: "V2_1",
+          violation: "Quên không rửa tay",
+          empId: "123",
+          empName: "ABC",
+          rank: "5",
+          title: "NVBH",
+          group:"Nhóm 3",
+          type:"N3-abc",
+          type2:"type2",
+          conclusion: "Chị ABC đã quên rửa tay",
+          penalty: "Không được hưởng 20% thưởng YTCLCV"
+        },
+        {
+          vId: "V2_2",
+          violation: "Quên không rửa tay",
+          empId: "123",
+          empName: "ABC",
+          rank: "5",
+          title: "NVBH",
+          group:"Nhóm 3",
+          type:"N3-abc",
+          type2:"type2",
+          conclusion: "Chị ABC đã quên rửa tay",
+          penalty: "Không được hưởng 20% thưởng YTCLCV"
+        },
+        {
+          vId: "V2_3",
+          violation: "Quên không rửa tay",
+          empId: "123",
+          empName: "ABC",
+          rank: "5",
+          title: "NVBH",
+          group:"Nhóm 3",
+          type:"N3-abc",
+          type2:"type2",
+          conclusion: "Chị ABC đã quên rửa tay",
+          penalty: "Không được hưởng 20% thưởng YTCLCV"
+        },
+        {
+          vId: "V2_4",
+          violation: "Quên không rửa tay",
+          empId: "123",
+          empName: "ABC",
+          rank: "5",
+          title: "NVBH",
+          group:"Nhóm 3",
+          type:"N3-abc",
+          type2:"type2",
+          conclusion: "Chị ABC đã quên rửa tay",
+          penalty: "Không được hưởng 20% thưởng YTCLCV"
+        }
+      ]
+    },
+    {
+      id: "V3",
+      audit:"Vùng Hải Phòng",
+      kstt: "Lê Thế Luật",
+      date: "2025-08-15",
+      sap: "2011",
+      store: "almaz",
+      violations: [
+        {
+          vId: "V3_1",
+          violation: "Quên không rửa tay",
+          empId: "123",
+          empName: "ABC",
+          rank: "5",
+          title: "NVBH",
+          group:"Nhóm 3",
+          type:"N3-abc",
+          type2:"type2",
+          conclusion: "Chị ABC đã quên rửa tay",
+          penalty: "Không được hưởng 20% thưởng YTCLCV"
+        },
+        {
+          vId: "V3_2",
+          violation: "Quên không rửa tay",
+          empId: "123",
+          empName: "ABC",
+          rank: "5",
+          title: "NVBH",
+          group:"Nhóm 3",
+          type:"N3-abc",
+          type2:"type2",
+          conclusion: "Chị ABC đã quên rửa tay",
+          penalty: "Không được hưởng 20% thưởng YTCLCV"
+        },
+        {
+          vId: "V3_3",
+          violation: "Quên không rửa tay",
+          empId: "123",
+          empName: "ABC",
+          rank: "5",
+          title: "NVBH",
+          group:"Nhóm 3",
+          type:"N3-abc",
+          type2:"type2",
+          conclusion: "Chị ABC đã quên rửa tay",
+          penalty: "Không được hưởng 20% thưởng YTCLCV"
+        },
+        {
+          vId: "V3_4",
+          violation: "Quên không rửa tay",
+          empId: "123",
+          empName: "ABC",
+          rank: "5",
+          title: "NVBH",
+          group:"Nhóm 3",
+          type:"N3-abc",
+          type2:"type2",
+          conclusion: "Chị ABC đã quên rửa tay",
+          penalty: "Không được hưởng 20% thưởng YTCLCV"
+        }
+      ]
+    }
+  ],
+
+  setup: {
+    types: [
+      'N1_Gian lận trục lợi',
+      'N1_Hành vi trộm cắp tham ô khác',
+      'N1_Ra quyết định vượt thẩm quyền gây thiệt hại ĐB nghiêm trọng',
+      'N1_Tự ý bỏ việc quá thời gian quy định',
+      'N2_Gian lận KK',
+      'N2_Gian lận báo cáo',
+      'N2_Gian lận chấm công',
+      'N2_Các hành vi không tuân thủ có tính chất nghiêm trọng ',
+      'N2_Ứng xử thiếu văn hóa',
+      'N2_Bao che',
+      'N3_Không tuân thủ QTQĐHD',
+      'N3_Không kiểm soát được công việc bộ phận',
+      'N3_Không hoàn thành nhiệm vụ được giao',
+      'N3_Ý thức kém',
+      'N3_Lỗi lặp hệ thống',
+      'N3_Vô ý tiết lộ thông tin bảo mật',
+      'N4_Tác phong diện mạo/SD ĐT sai quy định',
+      'N4_ Không thực hiện đầy đủ QTQĐHD/Lỗi KTNV/Sai sót BC',
+      'N4_Không phản hồi thông tin theo QĐ',
+      'N5_Không chấp hành đầy đủ các quy định hành chính',
+    ],
+    audit:["Vùng ", "Vùng abc"]
+
   },
   caseObj: [
     {

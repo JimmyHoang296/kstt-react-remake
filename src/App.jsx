@@ -5,17 +5,18 @@ import Calendar from "./pages/calendar/Calendar";
 import SearchStore from "./pages/searchStore/SearchStore";
 import Sidebar from "./components/Sidebar";
 import Header from "./components/Header";
-import Login from "./pages/taskManager/Login";
-import { response } from "./assets/mockData";
+import { mockdata } from "./assets/mockData";
+import ViolationManager from "./pages/violation/ViolationManager";
+import Login from "./pages/login/Login";
 
 // Mock data for demonstration
 
 // Main App Component
 const App = () => {
-  const [currentPage, setCurrentPage] = useState("dashboard");
+  const [currentPage, setCurrentPage] = useState("violation-management");
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [isLogin, setIsLogin] = useState(false);
-  const [data, setData] = useState(response)
+  const [isLogin, setIsLogin] = useState(true);
+  const [data, setData] = useState(mockdata)
   
   const renderContent = () => {
     switch (currentPage) {
@@ -27,6 +28,8 @@ const App = () => {
         return <Calendar data={data} setData={setData}/>;
       case "search":
         return <SearchStore />;
+      case "violation-management":
+        return <ViolationManager data={data} setData={setData}/>;
       default:
         return <Dashboard />;
     }

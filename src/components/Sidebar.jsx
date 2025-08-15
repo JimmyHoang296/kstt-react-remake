@@ -1,6 +1,7 @@
 import {
   Calendar,
   ChevronLeft,
+  DownloadCloud,
   LayoutDashboard,
   ListTodo,
   Search,
@@ -19,6 +20,7 @@ const Sidebar = ({ user, isSidebarOpen, setIsSidebarOpen, setCurrentPage }) => {
     { name: "Dashboard", icon: <LayoutDashboard />, page: "dashboard" },
     { name: "Sự vụ", icon: <ListTodo />, page: "task-management" },
     { name: "Tìm kiếm", icon: <Search />, page: "search" },
+    { name: "Ghi nhận", icon: <DownloadCloud />, page: "violation-management" },
   ];
   const navItems = user.role === "emp" ? navItemsUser : navItemsLeader;
   return (
