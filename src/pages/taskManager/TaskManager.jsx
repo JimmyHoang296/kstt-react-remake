@@ -127,7 +127,7 @@ const TaskManager = ({ data, setData }) => {
   };
 
   async function handleSaveNewTask(newTask) {
-    const user = response.user;
+    const user = data.user;
     newTask.hod = user.hod;
 
     // update to dtbase
