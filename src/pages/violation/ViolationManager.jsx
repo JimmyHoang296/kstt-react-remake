@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Eye, Plus } from "lucide-react";
-import { toDateInputValue } from "../../assets/helpers";
+import { getTodayDateString, toDateInputValue } from "../../assets/helpers";
 import { URL } from "../../assets/variables";
 import Pagination from "../../components/Pagination";
 import LoadingModal from "../../components/LoadingModal";
@@ -58,7 +58,7 @@ const ViolationManager = ({ data, setData }) => {
   async function handleUpdate(updatedTask) {
     // update to dtbase
     const submitData = {
-      type: "update",
+      type: "updateViolations",
       data: updatedTask,
     };
     try {
@@ -74,9 +74,9 @@ const ViolationManager = ({ data, setData }) => {
       const result = await response.json(); // Assuming response is JSON
       if (result.success) {
         // update to local
-        setTasks(
-          violations.map((task) => (task.id === updatedTask.id ? updatedTask : task))
-        );
+        // setTasks(
+        //   violations.map((task) => (task.id === updatedTask.id ? updatedTask : task))
+        // );
         handleCloseModal();
       }
     } catch (error) {
@@ -121,18 +121,33 @@ const ViolationManager = ({ data, setData }) => {
 
   // Add functionality for creating a new task
   const handleAddNewViolation = () => {
-    setSelectedTask(null); // Open modal with empty form for new task
+    setSelectedTask({
+      date: getTodayDateString(),
+      violations: [],
+    }); // Open modal with empty form for new task
     setIsModalOpen(true);
   };
 
   async function handleSaveNewTask(newTask) {
     const user = data.user;
-    newTask.hod = user.hod;
-
+    newTask.user = user.name;
     // update to dtbase
 
+    if (!newTask.sap) {
+      alert("Bắt buộc nhập mã CH");
+      return;
+    }
+    if (
+      !newTask.violations ||
+      !newTask.violations.length ||
+      !newTask.violations.filter((v) => v.violation).length
+    ) {
+      alert("Sự vụ bắt buộc phải có ghi nhận");
+      return;
+    }
+
     const submitData = {
-      type: "new",
+      type: "newViolation",
       data: newTask,
     };
     try {
@@ -149,8 +164,11 @@ const ViolationManager = ({ data, setData }) => {
       if (result.success) {
         // update to local
         newTask.id = result.data;
-        setTasks([...violations, newTask]);
-        // setTasks([...violations, { ...newTask, id: violations.length + 1 }]);
+        newTask.violations.map((v, i) => ({
+          ...v,
+          vId: newTask.id + "_" + (i + 1),
+        }));
+        setViolations([...violations, newTask]);
         handleCloseModal();
       }
     } catch (error) {
@@ -187,9 +205,7 @@ const ViolationManager = ({ data, setData }) => {
         <h3 className="text-xl font-bold mb-2">Tìm ghi nhận</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
           <div>
-            <label className="block text-gray-700 text-sm mb-1">
-              Mã CH
-            </label>
+            <label className="block text-gray-700 text-sm mb-1">Mã CH</label>
             <input
               type="text"
               name="sap"
@@ -200,7 +216,9 @@ const ViolationManager = ({ data, setData }) => {
           </div>
 
           <div>
-            <label className="block text-gray-700 text-sm mb-1">Đợt kiểm tra</label>
+            <label className="block text-gray-700 text-sm mb-1">
+              Đợt kiểm tra
+            </label>
             <input
               type="text"
               name="audit"
@@ -212,7 +230,7 @@ const ViolationManager = ({ data, setData }) => {
 
           <div className="flex sm:justify-end items-end">
             <button
-              onClick={() => setSearchQuery({ email: "", status: "", pic: "" })}
+              onClick={() => setSearchQuery({ sap: "", audit: "" })}
               className="bg-gray-300 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-400 w-full sm:w-auto"
             >
               Clear Search
@@ -256,8 +274,7 @@ const ViolationManager = ({ data, setData }) => {
                   <td className="px-4 py-3 ">{toDateInputValue(task.date)}</td>
                   <td className="px-4 py-3 ">{task.sap}</td>
                   <td className="px-4 py-3 ">{task.store}</td>
-                  <td className="px-4 py-3 "></td>
-                  
+
                   <td className="px-4 py-3  text-center">
                     <button
                       onClick={() => handleOpenModal(task)}
@@ -281,44 +298,35 @@ const ViolationManager = ({ data, setData }) => {
             >
               <div>
                 <span className="text-xs font-semibold text-gray-500">
-                  Email:
+                  Đợt kiểm tra:
                 </span>
-                <p className="text-sm">{task.email}</p>
+                <p className="text-sm">{task.audit}</p>
               </div>
               <div>
                 <span className="text-xs font-semibold text-gray-500">
-                  Status:
+                  Ngày kiểm tra:
                 </span>
-                <p>
-                  <span
-                    className={`px-2 py-1 text-xs leading-5 font-semibold rounded-full ${
-                      task.status === "Đang xử lý"
-                        ? "bg-yellow-100 text-yellow-800"
-                        : "bg-green-100 text-green-800"
-                    }`}
-                  >
-                    {task.status}
-                  </span>
-                </p>
+                <p className="text-sm">{toDateInputValue(task.date)}</p>
               </div>
               <div>
                 <span className="text-xs font-semibold text-gray-500">
-                  PIC:
+                  Mã CH:
                 </span>
-                <p className="text-sm">{task.pic}</p>
+                <p className="text-sm">{task.sap}</p>
               </div>
               <div>
                 <span className="text-xs font-semibold text-gray-500">
-                  Start Date:
+                  Tên CH:
                 </span>
-                <p className="text-sm">{toDateInputValue(task.startDate)}</p>
+                <p className="text-sm">{task.store}</p>
               </div>
               <div className="flex justify-end">
                 <button
                   onClick={() => handleOpenModal(task)}
-                  className="text-indigo-600 hover:text-indigo-900"
+                  className="text-indigo-600 hover:text-indigo-900 flex items-center gap-2"
                 >
                   <Eye className="w-5 h-5" />
+                  <p>Xem chi tiết</p>
                 </button>
               </div>
             </div>
