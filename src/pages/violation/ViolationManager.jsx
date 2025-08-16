@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Eye, Plus } from "lucide-react";
-import { getTodayDateString, toDateInputValue } from "../../assets/helpers";
+import { downloadFile, getTodayDateString, toDateInputValue } from "../../assets/helpers";
 import { URL } from "../../assets/variables";
 import Pagination from "../../components/Pagination";
 import LoadingModal from "../../components/LoadingModal";
@@ -96,6 +96,37 @@ const ViolationManager = ({ data, setData }) => {
           v.id === updatedTask.id ? updatedTask : v
         );
         setViolations(updatedViolations);
+        handleCloseModal();
+      }
+    } catch (error) {
+      console.error("Error sending request:", error);
+      return { success: false, error: error.message }; // Return error object
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleCreateRecord(taskId) {
+    if (!confirm("Bạn muốn tạo biên bản sự vụ này")) return;
+    // update to dtbase
+    const submitData = {
+      type: "createRecord",
+      data: taskId,
+    };
+    try {
+      setLoading(true);
+      const response = await fetch(URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "text/plain;charset=utf-8",
+        },
+        body: JSON.stringify(submitData), // body data type must match "Content-Type" header
+      });
+
+      const result = await response.json(); // Assuming response is JSON
+      if (result.success) {
+        // download file
+        downloadFile (result.data)
         handleCloseModal();
       }
     } catch (error) {
@@ -358,6 +389,7 @@ const ViolationManager = ({ data, setData }) => {
           onSave={handleSaveNewTask}
           onUpdate={handleUpdate}
           onDelete={handleDelete}
+          onCreateRecord={handleCreateRecord}
         />
       )}
       {loading && <LoadingModal message={"Loading..."} />}

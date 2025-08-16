@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
-import { Save, Trash, PlusCircle } from "lucide-react";
+import { Save, Trash, PlusCircle, Printer } from "lucide-react";
 import { toDateInputValue } from "../../assets/helpers";
 import SuggestInput from "../../components/SuggestInput";
 
@@ -10,6 +10,7 @@ const ViolationDetailModal = ({
   onSave,
   onUpdate,
   onDelete,
+  onCreateRecord
 }) => {
   const isNewTask = !task?.id;
 
@@ -96,17 +97,26 @@ const ViolationDetailModal = ({
             </h3>
             <button
               onClick={handleSave}
-              className="bg-indigo-500 text-white px-4 py-2 rounded-lg hover:bg-indigo-600 transition-colors flex items-center"
+              className="bg-indigo-500 cursor-pointer text-white px-4 py-2 rounded-lg hover:bg-indigo-600 transition-colors flex items-center"
             >
               <Save className="mr-2" /> Lưu
             </button>
             {!isNewTask && (
+              <>
               <button
                 onClick={() => onDelete(task.id)}
-                className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors flex items-center"
+                className="bg-red-500 cursor-pointer text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors flex items-center"
               >
                 <Trash className="mr-2" /> Xóa
               </button>
+              <button
+                onClick={() => onCreateRecord(task.id)}
+                className="bg-green-500 cursor-pointer text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors flex items-center"
+              >
+                <Printer className="mr-2" /> Tạo biên bản
+              </button>
+              
+              </>
             )}
           </div>
           <button
@@ -168,7 +178,7 @@ const ViolationDetailModal = ({
             <h4 className="text-lg font-bold">Danh sách ghi nhận</h4>
             <button
               onClick={handleCreateViolation}
-              className="bg-green-500 text-white px-3 py-1 rounded-lg hover:bg-green-600 flex items-center"
+              className="bg-green-500 cursor-pointer text-white px-3 py-1 rounded-lg hover:bg-green-600 flex items-center"
             >
               <PlusCircle className="mr-1" size={18} /> Thêm ghi nhận
             </button>
@@ -188,7 +198,7 @@ const ViolationDetailModal = ({
                 <div className="flex justify-end mb-2">
                   <button
                     onClick={() => handleDeleteViolation(index)}
-                    className="text-red-500 hover:text-red-700 flex items-center gap-2"
+                    className="text-red-500 cursor-pointer hover:text-red-700 flex items-center gap-2"
                   >
                     <Trash size={18} />
                     <span>Xóa ghi nhận</span>

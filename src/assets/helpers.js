@@ -11,3 +11,12 @@ export function getTodayDateString() {
     const dd = String(today.getDate()).padStart(2, '0');
     return `${yyyy}-${mm}-${dd}`
 }
+
+export function downloadFile(url) {
+  const link = document.createElement("a");
+  link.href = url;
+  // KHÔNG đặt link.download
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
