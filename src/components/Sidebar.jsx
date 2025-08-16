@@ -15,6 +15,8 @@ const Sidebar = ({ user, isSidebarOpen, setIsSidebarOpen, setCurrentPage }) => {
     { name: "Sự vụ", icon: <ListTodo />, page: "task-management" },
     { name: "Lịch làm việc", icon: <Calendar />, page: "calendar" },
     { name: "Tìm kiếm", icon: <Search />, page: "search" },
+    { name: "Ghi nhận", icon: <DownloadCloud />, page: "violation-management" },
+
   ];
   const navItemsLeader = [
     { name: "Dashboard", icon: <LayoutDashboard />, page: "dashboard" },

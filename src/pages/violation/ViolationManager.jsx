@@ -55,12 +55,30 @@ const ViolationManager = ({ data, setData }) => {
     setSelectedTask(null);
   };
 
+  const isValidViolation = (task) => {
+    if (!task.sap) {
+      alert("Bắt buộc nhập mã CH");
+      return false;
+    }
+    if (
+      !task.violations ||
+      !task.violations.length ||
+      !task.violations.filter((v) => v.violation).length
+    ) {
+      alert("Sự vụ bắt buộc phải có ghi nhận");
+      return false;
+    }
+    return true;
+  };
+
   async function handleUpdate(updatedTask) {
+    if (!isValidViolation(updatedTask)) return;
     // update to dtbase
     const submitData = {
-      type: "updateViolations",
+      type: "updateViolation",
       data: updatedTask,
     };
+
     try {
       setLoading(true);
       const response = await fetch(URL, {
@@ -74,9 +92,10 @@ const ViolationManager = ({ data, setData }) => {
       const result = await response.json(); // Assuming response is JSON
       if (result.success) {
         // update to local
-        // setTasks(
-        //   violations.map((task) => (task.id === updatedTask.id ? updatedTask : task))
-        // );
+        const updatedViolations = [...violations].map((v) =>
+          v.id === updatedTask.id ? updatedTask : v
+        );
+        setViolations(updatedViolations);
         handleCloseModal();
       }
     } catch (error) {
@@ -91,7 +110,7 @@ const ViolationManager = ({ data, setData }) => {
     if (!confirm("Bạn muốn xóa sự vụ này")) return;
     // update to dtbase
     const submitData = {
-      type: "delete",
+      type: "deleteViolation",
       data: taskId,
     };
     try {
@@ -107,7 +126,7 @@ const ViolationManager = ({ data, setData }) => {
       const result = await response.json(); // Assuming response is JSON
       if (result.success) {
         // delete in local
-        setTasks((prev) => prev.filter((task) => task.id !== taskId));
+        setViolations((prev) => prev.filter((task) => task.id !== taskId));
         // setTasks([...violations, { ...newTask, id: violations.length + 1 }]);
         handleCloseModal();
       }
@@ -130,21 +149,11 @@ const ViolationManager = ({ data, setData }) => {
 
   async function handleSaveNewTask(newTask) {
     const user = data.user;
-    newTask.user = user.name;
+    newTask.user = user.id;
+    newTask.name = user.name;
     // update to dtbase
 
-    if (!newTask.sap) {
-      alert("Bắt buộc nhập mã CH");
-      return;
-    }
-    if (
-      !newTask.violations ||
-      !newTask.violations.length ||
-      !newTask.violations.filter((v) => v.violation).length
-    ) {
-      alert("Sự vụ bắt buộc phải có ghi nhận");
-      return;
-    }
+    if (!isValidViolation(newTask)) return;
 
     const submitData = {
       type: "newViolation",

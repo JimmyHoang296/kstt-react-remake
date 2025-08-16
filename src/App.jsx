@@ -15,7 +15,7 @@ import Login from "./pages/login/Login";
 const App = () => {
   const [currentPage, setCurrentPage] = useState("violation-management");
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [isLogin, setIsLogin] = useState(true);
+  const [isLogin, setIsLogin] = useState(false);
   const [data, setData] = useState(mockdata)
   
   const renderContent = () => {

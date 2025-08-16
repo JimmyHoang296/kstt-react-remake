@@ -219,11 +219,11 @@ export const mockdata = {
       "N4_Không phản hồi thông tin theo QĐ",
       "N5_Không chấp hành đầy đủ các quy định hành chính",
     ],
-    audit: ["Vùng ", "Vùng abc"],
+    audits: ["Vùng ", "Vùng abc"],
     groups: ["", "Nhóm 1", "Nhóm 2", "Nhóm 3", "Nhóm 4", "Nhóm 5"],
     penalties: ["", "Trừ 200k", "Trừ 500k", "Trừ 1 đống k"],
   },
-  caseObj: [
+  cases: [
     {
       id: "I11",
       email:

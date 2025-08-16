@@ -9,7 +9,7 @@ import LoadingModal from "../../components/LoadingModal";
 
 // Task Management Component (CRUD)
 const TaskManager = ({ data, setData }) => {
-  const [tasks, setTasks] = useState(data.caseObj);
+  const [tasks, setTasks] = useState(data.cases);
   const [searchQuery, setSearchQuery] = useState({
     email: "",
     status: "",
@@ -45,7 +45,7 @@ const TaskManager = ({ data, setData }) => {
     );
   }, [searchQuery, tasks]);
   useEffect(() => {
-    setData((prev) => ({ ...prev, ["caseObj"]: tasks }));
+    setData((prev) => ({ ...prev, ["cases"]: tasks }));
   }, [tasks]);
   const handleOpenModal = (task) => {
     setSelectedTask(task);

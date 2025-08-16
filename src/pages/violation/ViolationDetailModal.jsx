@@ -35,7 +35,11 @@ const ViolationDetailModal = ({
   };
 
   const handleSave = () => {
-    const cleanedViolations = violations.filter((v) => v.violation?.trim());
+    var cleanedViolations = violations.filter((v) => v.violation?.trim());
+    cleanedViolations = cleanedViolations.map((v, i) => ({
+      ...v,
+      vId: formData.id + "_" + (i + 1),
+    }));
     const finalData = { ...formData, violations: cleanedViolations };
 
     if (isNewTask) {
@@ -49,6 +53,7 @@ const ViolationDetailModal = ({
 
   const handleCreateViolation = () => {
     const newViolation = {
+      vId: "",
       violation: "",
       empId: "",
       empName: "",
@@ -118,7 +123,7 @@ const ViolationDetailModal = ({
             label={"Đợt kiểm tra"}
             name={"audit"}
             onChange={handleInputChange}
-            options={data.setup.audit}
+            options={data.setup.audits}
             value={formData.audit || ""}
           />
           <div>
