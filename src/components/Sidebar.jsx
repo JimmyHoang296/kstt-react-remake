@@ -5,6 +5,7 @@ import {
   LayoutDashboard,
   ListTodo,
   Search,
+  Store,
   User,
 } from "lucide-react";
 import React from "react";
@@ -16,6 +17,7 @@ const Sidebar = ({ user, isSidebarOpen, setIsSidebarOpen, setCurrentPage }) => {
     { name: "Lịch làm việc", icon: <Calendar />, page: "calendar" },
     { name: "Tìm kiếm", icon: <Search />, page: "search" },
     { name: "Ghi nhận", icon: <DownloadCloud />, page: "violation-management" },
+    { name: "Lịch BM", icon: <Store />, page: "visit-plan-management" },
 
   ];
   const navItemsLeader = [
@@ -23,13 +25,15 @@ const Sidebar = ({ user, isSidebarOpen, setIsSidebarOpen, setCurrentPage }) => {
     { name: "Sự vụ", icon: <ListTodo />, page: "task-management" },
     { name: "Tìm kiếm", icon: <Search />, page: "search" },
     { name: "Ghi nhận", icon: <DownloadCloud />, page: "violation-management" },
+    { name: "Lịch BM", icon: <Store />, page: "visit-plan-management" },
+
+
   ];
   const navItems = user.role === "emp" ? navItemsUser : navItemsLeader;
   return (
     <div
-      className={`fixed inset-y-0 left-0 bg-white shadow-lg p-4 transition-all duration-300 z-50 ${
-        isSidebarOpen ? "w-64" : "w-16"
-      }`}
+      className={`fixed inset-y-0 left-0 bg-white shadow-lg p-4 transition-all duration-300 z-50 ${isSidebarOpen ? "w-64" : "w-16"
+        }`}
     >
       <div className="flex items-center justify-between h-16 mb-6">
         {isSidebarOpen && (
@@ -40,9 +44,8 @@ const Sidebar = ({ user, isSidebarOpen, setIsSidebarOpen, setCurrentPage }) => {
           className="p-2 rounded-full hover:bg-gray-200"
         >
           <ChevronLeft
-            className={`w-5 h-5 transition-transform duration-300 ${
-              isSidebarOpen ? "" : "rotate-180"
-            }`}
+            className={`w-5 h-5 transition-transform duration-300 ${isSidebarOpen ? "" : "rotate-180"
+              }`}
           />
         </button>
       </div>
@@ -60,9 +63,8 @@ const Sidebar = ({ user, isSidebarOpen, setIsSidebarOpen, setCurrentPage }) => {
                   {item.icon}
                 </span>
                 <span
-                  className={`whitespace-nowrap transition-opacity duration-300 ${
-                    isSidebarOpen ? "opacity-100" : "opacity-0"
-                  }`}
+                  className={`whitespace-nowrap transition-opacity duration-300 ${isSidebarOpen ? "opacity-100" : "opacity-0"
+                    }`}
                 >
                   {item.name}
                 </span>
@@ -72,9 +74,8 @@ const Sidebar = ({ user, isSidebarOpen, setIsSidebarOpen, setCurrentPage }) => {
         </ul>
       </nav>
       <div
-        className={`absolute bottom-4 left-4 right-4 flex items-center p-3 rounded-lg text-gray-600 transition-opacity duration-300 ${
-          isSidebarOpen ? "opacity-100" : "opacity-0"
-        }`}
+        className={`absolute bottom-4 left-4 right-4 flex items-center p-3 rounded-lg text-gray-600 transition-opacity duration-300 ${isSidebarOpen ? "opacity-100" : "opacity-0"
+          }`}
       >
         <User className="w-5 h-5 flex-shrink-0 mr-3" />
         {isSidebarOpen && <span className="text-sm">{user.name}</span>}
