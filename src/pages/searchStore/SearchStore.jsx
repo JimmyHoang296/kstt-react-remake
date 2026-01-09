@@ -4,6 +4,19 @@ import LoadingModal from '../../components/LoadingModal';
 const URL =
   'https://script.google.com/macros/s/AKfycbzpnjGlXSJheKpWsN9C-YqD5npxEF07yIiz3WTDAh3xFFmjDFHovVY7uSVDBmh4xjMu/exec';
 
+//sample item
+// "site": item[0],
+// "siteName": item[1],
+// "KSTT": item[2],
+// "address": item[3],
+// "lat": item[4],
+// "long": item[5],
+// "CHT": item[6],
+// "CHTPhone": item[7],
+// "QLKV": item[8],
+// "GDV": item[9]
+
+
 const SearchStore = () => {
   const [site, setSite] = useState('');
   const [siteName, setSiteName] = useState('');
@@ -16,7 +29,7 @@ const SearchStore = () => {
       alert('Nhập thông tin tìm kiếm')
       return;
     }
-    
+
     setLoading(true);
 
     try {
@@ -92,6 +105,14 @@ const SearchStore = () => {
               <p className="text-gray-600">{shop.address}</p>
               <div className="mt-2 text-sm">
                 <p>
+                  <strong>CHT:</strong> {shop.CHT} |   <a
+                    href={`tel:${shop.CHTPhone}`}
+                    className="text-blue-600 underline"
+                  >
+                    {shop.CHTPhone}
+                  </a>
+                </p>
+                <p>
                   <strong>QLKV:</strong> {shop.QLKV}
                 </p>
                 <p>
@@ -117,7 +138,7 @@ const SearchStore = () => {
           !loading && <p className="text-gray-500">Không tìm thấy cửa hàng nào.</p>
         )}
       </div>
-      {loading && <LoadingModal message={"loading..."}/>}
+      {loading && <LoadingModal message={"loading..."} />}
     </div>
   );
 };
