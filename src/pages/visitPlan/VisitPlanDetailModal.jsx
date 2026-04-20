@@ -54,7 +54,29 @@ const VisitPlanDetailModal = ({ plan, onClose, onSave, onUpdate, onDelete }) => 
               className="w-full p-2 border rounded-md"
             />
           </div>
-          
+          <div>
+            <label className="block text-sm">Path</label>
+            <input
+              type="text"
+              name="path"
+              value={formData.path || ""}
+              onChange={handleChange}
+              className="w-full p-2 border rounded-md"
+            />
+          </div>
+          <div>
+            <label className="block text-sm">Trạng thái</label>
+            <select
+              name="status"
+              value={formData.status || "pending"}
+              onChange={handleChange}
+              className="w-full p-2 border rounded-md"
+            >
+              <option value="pending">Pending</option>
+              <option value="done">Done</option>
+              <option value="cancelled">Cancelled</option>
+            </select>
+          </div>
         </div>
 
         {/* Footer */}

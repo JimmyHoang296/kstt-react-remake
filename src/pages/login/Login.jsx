@@ -1,8 +1,11 @@
 import React, { useState } from "react";
 import LoadingModal from "../../components/LoadingModal";
-import { URL } from "../../assets/variables";
+import { api } from "../../api";
+import useStore from "../../store/useStore";
 
-const Login = ({ setIsLogin, setData }) => {
+const Login = () => {
+  const setIsLogin = useStore((state) => state.setIsLogin);
+  const setData = useStore((state) => state.setData);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -13,22 +16,9 @@ const Login = ({ setIsLogin, setData }) => {
       alert("Nhập thông tin");
       return;
     }
-    const submitData = {
-      type: "login",
-      data: { username: email, password },
-    };
-
     try {
       setLoading(true);
-      const response = await fetch(URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "text/plain;charset=utf-8",
-        },
-        body: JSON.stringify(submitData), // body data type must match "Content-Type" header
-      });
-
-      const result = await response.json(); // Assuming response is JSON
+      const result = await api.login({ username: email, password });
       if (result.success) {
         // update to local
         setData(result.data);

@@ -1,10 +1,10 @@
-import React from 'react'
-import { Clock, ListTodo } from 'lucide-react';
+import React from 'react';
+import { ListTodo } from 'lucide-react';
+import useStore from '../../store/useStore';
 
-// Dashboard Component
-const Dashboard = ({data}) => {
-  
-  const pendingTasks = data.cases.filter(task => task.status === 'Đang xử lý').length;
+const Dashboard = () => {
+  const cases = useStore((state) => state.data.cases);
+  const pendingTasks = cases.filter((task) => task.status === 'Đang xử lý').length;
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

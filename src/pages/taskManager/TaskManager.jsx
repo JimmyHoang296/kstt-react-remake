@@ -1,89 +1,106 @@
-
 import React, { useEffect, useMemo, useState } from "react";
-import { Eye, Plus } from "lucide-react";
+import { ChevronDown, ChevronUp, ChevronsUpDown, Eye, Plus } from "lucide-react";
 import { toDateInputValue } from "../../assets/helpers";
-import { URL } from "../../assets/variables";
+import { api } from "../../api";
+import { useManagerPage } from "../../hooks/useManagerPage";
+import useStore from "../../store/useStore";
 import TaskDetailModal from "./TaskDetailModal";
 import Pagination from "../../components/Pagination";
 import LoadingModal from "../../components/LoadingModal";
 
-// Task Management Component (CRUD)
-const TaskManager = ({ data, setData }) => {
-  const [tasks, setTasks] = useState(data.cases);
-  const [searchQuery, setSearchQuery] = useState({
-    email: "",
-    status: "",
-    pic: "",
+const taskFilterFn = (task, q) =>
+  (!q.email || task.email?.toLowerCase().includes(q.email.toLowerCase())) &&
+  (!q.pic || task.pic?.toLowerCase().includes(q.pic.toLowerCase())) &&
+  (!q.status || task.status?.toLowerCase().includes(q.status.toLowerCase()));
+
+const sortedCases = (cases) =>
+  [...cases].sort((a, b) => {
+    const dateA = a.startDate ? new Date(a.startDate).getTime() : 0;
+    const dateB = b.startDate ? new Date(b.startDate).getTime() : 0;
+    return dateB - dateA;
   });
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [selectedTask, setSelectedTask] = useState(null);
-  const [filteredTasks, setFilteredTasks] = useState(tasks);
-  const [currentPage, setCurrentPage] = useState(1);
+
+const TaskManager = () => {
+  const data = useStore((state) => state.data);
+  const setData = useStore((state) => state.setData);
+  const addToast = useStore((state) => state.addToast);
+  const {
+    items: tasks,
+    setItems: setTasks,
+    searchQuery,
+    filteredItems,
+    currentPage,
+    setCurrentPage,
+    isModalOpen,
+    selectedItem: selectedTask,
+    loading,
+    setLoading,
+    handleSearchChange,
+    resetSearch,
+    openModal,
+    closeModal,
+  } = useManagerPage({
+    initialItems: sortedCases(data.cases),
+    initialSearch: { email: "", status: "", pic: "" },
+    filterFn: taskFilterFn,
+  });
+
+  const [sortField, setSortField] = useState("startDate");
+  const [sortDir, setSortDir] = useState("desc");
   const tasksPerPage = 20;
 
-  const handleSearchChange = (e) => {
-    const name = e.target.name;
-    setSearchQuery({ ...searchQuery, [name]: e.target.value });
+  const handleSort = (field) => {
+    if (sortField === field) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortField(field);
+      setSortDir("asc");
+    }
     setCurrentPage(1);
   };
-  useEffect(() => {
-    setFilteredTasks(
-      tasks.filter(
-        (task) =>
-          (!searchQuery.email ||
-            task.email
-              .toLowerCase()
-              .includes(searchQuery.email.toLowerCase())) &&
-          (!searchQuery.pic ||
-            task.pic.toLowerCase().includes(searchQuery.pic.toLowerCase())) &&
-          (!searchQuery.status ||
-            task.status
-              .toLowerCase()
-              .includes(searchQuery.status.toLowerCase()))
-      )
-    );
-  }, [searchQuery, tasks]);
-  useEffect(() => {
-    setData((prev) => ({ ...prev, ["cases"]: tasks }));
-  }, [tasks]);
-  const handleOpenModal = (task) => {
-    setSelectedTask(task);
-    setIsModalOpen(true);
+
+  const SortIcon = ({ field }) => {
+    if (sortField !== field) return <ChevronsUpDown className="w-3 h-3 inline ml-1 opacity-40" />;
+    return sortDir === "asc"
+      ? <ChevronUp className="w-3 h-3 inline ml-1" />
+      : <ChevronDown className="w-3 h-3 inline ml-1" />;
   };
 
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-    setSelectedTask(null);
-  };
+  const paginatedTasks = useMemo(() => {
+    const sorted = [...filteredItems].sort((a, b) => {
+      const valA = a[sortField] ?? "";
+      const valB = b[sortField] ?? "";
+      const cmp =
+        typeof valA === "string"
+          ? valA.localeCompare(valB)
+          : valA < valB ? -1 : valA > valB ? 1 : 0;
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+    const start = (currentPage - 1) * tasksPerPage;
+    return sorted.slice(start, start + tasksPerPage);
+  }, [filteredItems, sortField, sortDir, currentPage]);
+
+  const totalPages = Math.ceil(filteredItems.length / tasksPerPage);
+
+  useEffect(() => {
+    setData((prev) => ({ ...prev, cases: tasks }));
+  }, [tasks]);
 
   async function handleUpdate(updatedTask) {
-    // update to dtbase
-    const submitData = {
-      type: "update",
-      data: updatedTask,
-    };
     try {
       setLoading(true);
-      const response = await fetch(URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "text/plain;charset=utf-8",
-        },
-        body: JSON.stringify(submitData), // body data type must match "Content-Type" header
-      });
-
-      const result = await response.json(); // Assuming response is JSON
+      const result = await api.updateCase(updatedTask);
       if (result.success) {
-        // update to local
-        setTasks(
-          tasks.map((task) => (task.id === updatedTask.id ? updatedTask : task))
+        setTasks((prev) =>
+          prev.map((t) => (t.id === updatedTask.id ? updatedTask : t))
         );
-        handleCloseModal();
+        closeModal();
+        addToast("Cập nhật sự vụ thành công");
+      } else {
+        addToast("Cập nhật thất bại", "error");
       }
     } catch (error) {
-      console.error("Error sending request:", error);
-      return { success: false, error: error.message }; // Return error object
+      addToast("Lỗi kết nối, thử lại sau", "error");
     } finally {
       setLoading(false);
     }
@@ -91,85 +108,42 @@ const TaskManager = ({ data, setData }) => {
 
   async function handleDelete(taskId) {
     if (!confirm("Bạn muốn xóa sự vụ này")) return;
-    // update to dtbase
-    const submitData = {
-      type: "delete",
-      data: taskId,
-    };
     try {
       setLoading(true);
-      const response = await fetch(URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "text/plain;charset=utf-8",
-        },
-        body: JSON.stringify(submitData), // body data type must match "Content-Type" header
-      });
-
-      const result = await response.json(); // Assuming response is JSON
+      const result = await api.deleteCase(taskId);
       if (result.success) {
-        // delete in local
-        setTasks((prev) => prev.filter((task) => task.id !== taskId));
-        // setTasks([...tasks, { ...newTask, id: tasks.length + 1 }]);
-        handleCloseModal();
+        setTasks((prev) => prev.filter((t) => t.id !== taskId));
+        closeModal();
+        addToast("Đã xóa sự vụ");
+      } else {
+        addToast("Xóa thất bại", "error");
       }
     } catch (error) {
-      console.error("Error sending request:", error);
-      return { success: false, error: error.message }; // Return error object
+      addToast("Lỗi kết nối, thử lại sau", "error");
     } finally {
       setLoading(false);
     }
   }
 
-  // Add functionality for creating a new task
-  const handleAddNewTask = () => {
-    setSelectedTask(null); // Open modal with empty form for new task
-    setIsModalOpen(true);
-  };
-
-  async function handleSaveNewTask(newTask) {
-    const user = data.user;
-    newTask.hod = user.hod;
-
-    // update to dtbase
-
-    const submitData = {
-      type: "new",
-      data: newTask,
-    };
+  async function handleSaveNew(newTask) {
+    newTask.hod = data.user.hod;
     try {
       setLoading(true);
-      const response = await fetch(URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "text/plain;charset=utf-8",
-        },
-        body: JSON.stringify(submitData), // body data type must match "Content-Type" header
-      });
-
-      const result = await response.json(); // Assuming response is JSON
+      const result = await api.createCase(newTask);
       if (result.success) {
-        // update to local
         newTask.id = result.data;
-        setTasks([...tasks, newTask]);
-        // setTasks([...tasks, { ...newTask, id: tasks.length + 1 }]);
-        handleCloseModal();
+        setTasks((prev) => [...prev, newTask]);
+        closeModal();
+        addToast("Thêm sự vụ thành công");
+      } else {
+        addToast("Thêm thất bại", "error");
       }
     } catch (error) {
-      console.error("Error sending request:", error);
-      return { success: false, error: error.message }; // Return error object
+      addToast("Lỗi kết nối, thử lại sau", "error");
     } finally {
       setLoading(false);
     }
   }
-
-  // Compute paginated tasks
-  const paginatedTasks = useMemo(() => {
-    const startIndex = (currentPage - 1) * tasksPerPage;
-    return filteredTasks.reverse().slice(startIndex, startIndex + tasksPerPage);
-  }, [filteredTasks, currentPage]);
-
-  const totalPages = Math.ceil(filteredTasks.length / tasksPerPage);
 
   return (
     <div className="p-6 bg-white rounded-xl shadow-md">
@@ -177,7 +151,7 @@ const TaskManager = ({ data, setData }) => {
       <div className="mb-6 border-b pb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <h2 className="text-2xl font-bold text-gray-800">Quản lý Sự vụ</h2>
         <button
-          onClick={handleAddNewTask}
+          onClick={() => openModal(null)}
           className="bg-indigo-500 text-white px-4 py-2 rounded-lg hover:bg-indigo-600 transition-colors flex items-center justify-center"
         >
           <Plus className="mr-2" /> Thêm sự vụ
@@ -189,9 +163,7 @@ const TaskManager = ({ data, setData }) => {
         <h3 className="text-xl font-bold mb-2">Tìm kiếm sự vụ</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
           <div>
-            <label className="block text-gray-700 text-sm mb-1">
-              Tiêu đề email
-            </label>
+            <label className="block text-gray-700 text-sm mb-1">Tiêu đề email</label>
             <input
               type="text"
               name="email"
@@ -200,7 +172,6 @@ const TaskManager = ({ data, setData }) => {
               className="w-full p-2 border rounded-md"
             />
           </div>
-
           <div>
             <label className="block text-gray-700 text-sm mb-1">Status</label>
             <select
@@ -215,7 +186,6 @@ const TaskManager = ({ data, setData }) => {
               <option>Đóng khác</option>
             </select>
           </div>
-
           <div>
             <label className="block text-gray-700 text-sm mb-1">PIC</label>
             <input
@@ -226,10 +196,9 @@ const TaskManager = ({ data, setData }) => {
               className="w-full p-2 border rounded-md"
             />
           </div>
-
           <div className="flex sm:justify-end items-end">
             <button
-              onClick={() => setSearchQuery({ email: "", status: "", pic: "" })}
+              onClick={resetSearch}
               className="bg-gray-300 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-400 w-full sm:w-auto"
             >
               Clear Search
@@ -240,56 +209,44 @@ const TaskManager = ({ data, setData }) => {
 
       {/* Task List Section */}
       <div className="pt-4">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-xl font-bold">Danh sách sự vụ</h3>
-        </div>
+        <h3 className="text-xl font-bold mb-4">Danh sách sự vụ</h3>
 
         {/* Table view for desktop */}
         <div className="hidden md:block overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200 text-sm">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">
-                  Email
-                </th>
-                <th className="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">
-                  PIC
-                </th>
-                <th className="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">
-                  Start Date
-                </th>
-                <th className="px-4 py-3 text-center font-medium text-gray-500 uppercase tracking-wider">
-                  Hành động
-                </th>
+                {[
+                  { label: "Email", field: "email" },
+                  { label: "Status", field: "status" },
+                  { label: "PIC", field: "pic" },
+                  { label: "Start Date", field: "startDate" },
+                ].map(({ label, field }) => (
+                  <th
+                    key={field}
+                    onClick={() => handleSort(field)}
+                    className="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider cursor-pointer select-none hover:bg-gray-100"
+                  >
+                    {label}
+                    <SortIcon field={field} />
+                  </th>
+                ))}
+                <th className="px-4 py-3 text-center font-medium text-gray-500 uppercase tracking-wider">Hành động</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {paginatedTasks.map((task) => (
                 <tr key={task.id}>
                   <td className="px-4 py-3 max-w-80 text-wrap">{task.email}</td>
-                  <td className="px-4 py-3 ">
-                    <span
-                      className={`px-2 inline-flex text-center text-xs leading-5 font-semibold rounded-full ${
-                        task.status === "Đang xử lý"
-                          ? "bg-yellow-100 text-yellow-800"
-                          : "bg-green-100 text-green-800"
-                      }`}
-                    >
+                  <td className="px-4 py-3">
+                    <span className={`px-2 inline-flex text-center text-xs leading-5 font-semibold rounded-full ${task.status === "Đang xử lý" ? "bg-yellow-100 text-yellow-800" : "bg-green-100 text-green-800"}`}>
                       {task.status}
                     </span>
                   </td>
-                  <td className="px-4 py-3 ">{task.pic}</td>
-                  <td className="px-4 py-3 ">
-                    {toDateInputValue(task.startDate)}
-                  </td>
-                  <td className="px-4 py-3  text-center">
-                    <button
-                      onClick={() => handleOpenModal(task)}
-                      className="text-indigo-600 hover:text-indigo-900"
-                    >
+                  <td className="px-4 py-3">{task.pic}</td>
+                  <td className="px-4 py-3">{toDateInputValue(task.startDate)}</td>
+                  <td className="px-4 py-3 text-center">
+                    <button onClick={() => openModal(task)} className="text-indigo-600 hover:text-indigo-900">
                       <Eye className="w-5 h-5 mx-auto" />
                     </button>
                   </td>
@@ -302,49 +259,29 @@ const TaskManager = ({ data, setData }) => {
         {/* Card view for mobile */}
         <div className="block md:hidden space-y-4">
           {paginatedTasks.map((task) => (
-            <div
-              key={task.id}
-              className="p-4 border rounded-lg shadow-sm bg-white space-y-2"
-            >
+            <div key={task.id} className="p-4 border rounded-lg shadow-sm bg-white space-y-2">
               <div>
-                <span className="text-xs font-semibold text-gray-500">
-                  Email:
-                </span>
+                <span className="text-xs font-semibold text-gray-500">Email:</span>
                 <p className="text-sm">{task.email}</p>
               </div>
               <div>
-                <span className="text-xs font-semibold text-gray-500">
-                  Status:
-                </span>
+                <span className="text-xs font-semibold text-gray-500">Status:</span>
                 <p>
-                  <span
-                    className={`px-2 py-1 text-xs leading-5 font-semibold rounded-full ${
-                      task.status === "Đang xử lý"
-                        ? "bg-yellow-100 text-yellow-800"
-                        : "bg-green-100 text-green-800"
-                    }`}
-                  >
+                  <span className={`px-2 py-1 text-xs leading-5 font-semibold rounded-full ${task.status === "Đang xử lý" ? "bg-yellow-100 text-yellow-800" : "bg-green-100 text-green-800"}`}>
                     {task.status}
                   </span>
                 </p>
               </div>
               <div>
-                <span className="text-xs font-semibold text-gray-500">
-                  PIC:
-                </span>
+                <span className="text-xs font-semibold text-gray-500">PIC:</span>
                 <p className="text-sm">{task.pic}</p>
               </div>
               <div>
-                <span className="text-xs font-semibold text-gray-500">
-                  Start Date:
-                </span>
+                <span className="text-xs font-semibold text-gray-500">Start Date:</span>
                 <p className="text-sm">{toDateInputValue(task.startDate)}</p>
               </div>
               <div className="flex justify-end">
-                <button
-                  onClick={() => handleOpenModal(task)}
-                  className="text-indigo-600 hover:text-indigo-900"
-                >
+                <button onClick={() => openModal(task)} className="text-indigo-600 hover:text-indigo-900">
                   <Eye className="w-5 h-5" />
                 </button>
               </div>
@@ -352,25 +289,20 @@ const TaskManager = ({ data, setData }) => {
           ))}
         </div>
 
-        {/* Pagination controls */}
-        <Pagination
-          totalPages={totalPages}
-          currentPage={currentPage}
-          setCurrentPage={setCurrentPage}
-        />
+        <Pagination totalPages={totalPages} currentPage={currentPage} setCurrentPage={setCurrentPage} />
       </div>
 
       {isModalOpen && (
         <TaskDetailModal
           data={data}
           task={selectedTask}
-          onClose={handleCloseModal}
-          onSave={handleSaveNewTask}
+          onClose={closeModal}
+          onSave={handleSaveNew}
           onUpdate={handleUpdate}
           onDelete={handleDelete}
         />
       )}
-      {loading && <LoadingModal message={"Loading..."} />}
+      {loading && <LoadingModal message="Loading..." />}
     </div>
   );
 };

@@ -1,88 +1,79 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect } from "react";
 import { Eye, Plus } from "lucide-react";
 import { getTodayDateString, toDateInputValue } from "../../assets/helpers";
-import { URL } from "../../assets/variables";
+import { api } from "../../api";
+import { useManagerPage } from "../../hooks/useManagerPage";
+import useStore from "../../store/useStore";
 import Pagination from "../../components/Pagination";
 import LoadingModal from "../../components/LoadingModal";
 import VisitPlanDetailModal from "./VisitPlanDetailModal";
 
-const VisitPlanManager = ({ data, setData }) => {
-  const [plans, setPlans] = useState(data.visitPlan || []);
-  const [searchQuery, setSearchQuery] = useState({ site: "", status: "" });
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [selectedPlan, setSelectedPlan] = useState(null);
-  const [filteredPlans, setFilteredPlans] = useState(plans);
-  const [currentPage, setCurrentPage] = useState(1);
-  const plansPerPage = 20;
+const planFilterFn = (p, q) =>
+  (!q.site || p.site?.toLowerCase().includes(q.site.toLowerCase())) &&
+  (!q.status || p.status?.toLowerCase().includes(q.status.toLowerCase()));
 
-  // search
-  const handleSearchChange = (e) => {
-    const { name, value } = e.target;
-    setSearchQuery({ ...searchQuery, [name]: value });
-    setCurrentPage(1);
-  };
-  useEffect(() => {
-    setFilteredPlans(
-      plans.filter(
-        (p) =>
-          (!searchQuery.site ||
-            p.site.toLowerCase().includes(searchQuery.site.toLowerCase())) &&
-          (!searchQuery.status ||
-            p.status.toLowerCase().includes(searchQuery.status.toLowerCase()))
-      )
-    );
-  }, [searchQuery, plans]);
+const VisitPlanManager = () => {
+  const data = useStore((state) => state.data);
+  const setData = useStore((state) => state.setData);
+  const addToast = useStore((state) => state.addToast);
+  const {
+    items: plans,
+    setItems: setPlans,
+    searchQuery,
+    currentPage,
+    setCurrentPage,
+    isModalOpen,
+    selectedItem: selectedPlan,
+    loading,
+    setLoading,
+    paginatedItems: paginatedPlans,
+    totalPages,
+    handleSearchChange,
+    openModal,
+    closeModal,
+  } = useManagerPage({
+    initialItems: data.visitPlan || [],
+    initialSearch: { site: "", status: "" },
+    filterFn: planFilterFn,
+  });
 
   useEffect(() => {
-    setData((prev) => ({ ...prev, visitplans: plans }));
+    setData((prev) => ({ ...prev, visitPlan: plans }));
   }, [plans]);
-
-  const handleOpenModal = (plan) => {
-    setSelectedPlan(plan);
-    setIsModalOpen(true);
-  };
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-    setSelectedPlan(null);
-  };
 
   async function handleSaveNew(plan) {
     const newPlan = { ...plan, user: data.user.id };
-    const submitData = { type: "createVisitPlan", data: newPlan };
-
     try {
       setLoading(true);
-      const res = await fetch(URL, {
-        method: "POST",
-        headers: { "Content-Type": "text/plain;charset=utf-8" },
-        body: JSON.stringify(submitData),
-      });
-      const result = await res.json();
+      const result = await api.createVisitPlan(newPlan);
       if (result.success) {
         newPlan.id = result.data;
-        setPlans([...plans, newPlan]);
-        handleCloseModal();
+        setPlans((prev) => [...prev, newPlan]);
+        closeModal();
+        addToast("Thêm kế hoạch thành công");
+      } else {
+        addToast("Thêm thất bại", "error");
       }
+    } catch (error) {
+      addToast("Lỗi kết nối, thử lại sau", "error");
     } finally {
       setLoading(false);
     }
   }
 
   async function handleUpdate(plan) {
-    const submitData = { type: "updateVisitPlan", data: plan };
     try {
       setLoading(true);
-      const res = await fetch(URL, {
-        method: "POST",
-        headers: { "Content-Type": "text/plain;charset=utf-8" },
-        body: JSON.stringify(submitData),
-      });
-      const result = await res.json();
+      const result = await api.updateVisitPlan(plan);
       if (result.success) {
         setPlans((prev) => prev.map((p) => (p.id === plan.id ? plan : p)));
-        handleCloseModal();
+        closeModal();
+        addToast("Cập nhật kế hoạch thành công");
+      } else {
+        addToast("Cập nhật thất bại", "error");
       }
+    } catch (error) {
+      addToast("Lỗi kết nối, thử lại sau", "error");
     } finally {
       setLoading(false);
     }
@@ -90,50 +81,30 @@ const VisitPlanManager = ({ data, setData }) => {
 
   async function handleDelete(planId) {
     if (!confirm("Bạn muốn xóa kế hoạch này?")) return;
-    const submitData = { type: "deleteVisitPlan", data: planId };
     try {
       setLoading(true);
-      const res = await fetch(URL, {
-        method: "POST",
-        headers: { "Content-Type": "text/plain;charset=utf-8" },
-        body: JSON.stringify(submitData),
-      });
-      const result = await res.json();
+      const result = await api.deleteVisitPlan(planId);
       if (result.success) {
         setPlans((prev) => prev.filter((p) => p.id !== planId));
-        handleCloseModal();
+        closeModal();
+        addToast("Đã xóa kế hoạch");
+      } else {
+        addToast("Xóa thất bại", "error");
       }
+    } catch (error) {
+      addToast("Lỗi kết nối, thử lại sau", "error");
     } finally {
       setLoading(false);
     }
   }
 
-  const handleAddNew = () => {
-    setSelectedPlan({
-      date: getTodayDateString(),
-      site: "",
-      path: "",
-      status: "pending",
-      user: data.user?.id || "",
-    });
-    setIsModalOpen(true);
-  };
-
-  // pagination
-  const paginatedPlans = useMemo(() => {
-    const start = (currentPage - 1) * plansPerPage;
-    return filteredPlans.slice(start, start + plansPerPage);
-  }, [filteredPlans, currentPage]);
-
-  const totalPages = Math.ceil(filteredPlans.length / plansPerPage);
-
   return (
     <div className="p-6 bg-white rounded-xl shadow-md">
       {/* Header */}
       <div className="mb-6 border-b pb-4 flex justify-between items-center">
-        <h2 className="text-2xl font-bold">Quản lý kế hoạch viếng thăm</h2>
+        <h2 className="text-2xl font-bold">Đăng ký đổ dữ liệu</h2>
         <button
-          onClick={handleAddNew}
+          onClick={() => openModal({ date: getTodayDateString(), site: "", path: "", status: "pending" })}
           className="bg-indigo-500 text-white px-4 py-2 rounded-lg hover:bg-indigo-600 flex items-center"
         >
           <Plus className="mr-2" /> Kế hoạch mới
@@ -166,9 +137,10 @@ const VisitPlanManager = ({ data, setData }) => {
           <thead className="bg-gray-50">
             <tr>
               <th className="px-4 py-2 text-left">Ngày</th>
-              <th className="px-4 py-2 text-left">site</th>
+              <th className="px-4 py-2 text-left">Site</th>
               <th className="px-4 py-2 text-left">Path</th>
               <th className="px-4 py-2 text-left">Trạng thái</th>
+              <th className="px-4 py-2 text-center">Hành động</th>
             </tr>
           </thead>
           <tbody>
@@ -178,24 +150,23 @@ const VisitPlanManager = ({ data, setData }) => {
                 <td className="px-4 py-2">{plan.site}</td>
                 <td className="px-4 py-2">{plan.path}</td>
                 <td className="px-4 py-2">{plan.status}</td>
-                
+                <td className="px-4 py-2 text-center">
+                  <button onClick={() => openModal(plan)} className="text-indigo-600 hover:text-indigo-900">
+                    <Eye className="w-5 h-5 mx-auto" />
+                  </button>
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
 
-      {/* Pagination */}
-      <Pagination
-        totalPages={totalPages}
-        currentPage={currentPage}
-        setCurrentPage={setCurrentPage}
-      />
+      <Pagination totalPages={totalPages} currentPage={currentPage} setCurrentPage={setCurrentPage} />
 
       {isModalOpen && (
         <VisitPlanDetailModal
           plan={selectedPlan}
-          onClose={handleCloseModal}
+          onClose={closeModal}
           onSave={handleSaveNew}
           onUpdate={handleUpdate}
           onDelete={handleDelete}

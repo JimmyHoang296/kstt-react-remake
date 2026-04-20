@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { ChevronLeft } from "lucide-react";
 import LoadingModal from "../../components/LoadingModal";
-import { URL } from "../../assets/variables";
+import { api } from "../../api";
+import useStore from "../../store/useStore";
 
-// your provided data
-
-const Calendar = ({ data,setData }) => {
+const Calendar = () => {
+  const data = useStore((state) => state.data);
+  const setData = useStore((state) => state.setData);
   const [currentWeekStart, setCurrentWeekStart] = useState(new Date());
   const [weekData, setWeekData] = useState({});
   const [isChanged, setIsChanged] = useState(false);
@@ -104,23 +105,9 @@ const Calendar = ({ data,setData }) => {
       martNumber: weekData[index]?.martNumber || "",
     }));
 
-    const submitData = {
-      type: "updateWork",
-      data: submitArray,
-    };
-
     try {
       setLoading(true);
-      const response = await fetch(URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "text/plain;charset=utf-8",
-        },
-        body: JSON.stringify(submitData),
-      });
-
-      const result = await response.json();
-
+      const result = await api.updateWork(submitArray);
       if (result.success) {
         // update to local
         setCalendar((prevCalendar) => {

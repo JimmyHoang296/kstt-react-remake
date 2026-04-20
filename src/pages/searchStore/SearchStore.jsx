@@ -1,8 +1,6 @@
 import React, { useState } from 'react';
 import LoadingModal from '../../components/LoadingModal';
-
-const URL =
-  'https://script.google.com/macros/s/AKfycbzpnjGlXSJheKpWsN9C-YqD5npxEF07yIiz3WTDAh3xFFmjDFHovVY7uSVDBmh4xjMu/exec';
+import { api } from '../../api';
 
 //sample item
 // "site": item[0],
@@ -33,18 +31,7 @@ const SearchStore = () => {
     setLoading(true);
 
     try {
-      const submitData = {
-        type: 'searchStore',
-        data: { site, siteName, siteAdd },
-      };
-
-      const res = await fetch(URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify(submitData),
-      });
-
-      const data = await res.json();
+      const data = await api.searchStore({ site, siteName, siteAdd });
       setResults(data.result || []);
     } catch (err) {
       console.error(err);

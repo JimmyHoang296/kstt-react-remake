@@ -33,7 +33,7 @@ const TaskDetailModal = ({ data, task, onClose, onSave, onUpdate, onDelete }) =>
         id: "",
         email: "",
         rank: "",
-        status: "",
+        status: "Đang xử lý",
         type: "",
         source: "",
         sap: "",
@@ -186,7 +186,7 @@ const TaskDetailModal = ({ data, task, onClose, onSave, onUpdate, onDelete }) =>
                                 Phân loại mức độ
                             </label>
                             <select
-                                name="category"
+                                name="level"
                                 value={formData.level}
                                 onChange={handleInputChange}
                                 className="w-full p-2 border rounded-md"
