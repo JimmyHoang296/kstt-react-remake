@@ -23,11 +23,12 @@ const navItemsEmp = [
 ];
 
 const navItemsLeader = [
-  { name: "Dashboard", icon: <LayoutDashboard size={20} />, page: "/dashboard" },
-  { name: "Sự vụ",     icon: <ListTodo size={20} />,        page: "/task-management" },
-  { name: "Tìm kiếm",  icon: <Search size={20} />,          page: "/search" },
-  { name: "Ghi nhận",  icon: <DownloadCloud size={20} />,   page: "/violation-management" },
-  { name: "Lịch BM",   icon: <Store size={20} />,           page: "/visit-plan-management" },
+  { name: "Dashboard",     icon: <LayoutDashboard size={20} />, page: "/dashboard" },
+  { name: "Sự vụ",         icon: <ListTodo size={20} />,        page: "/task-management" },
+  { name: "Lịch làm việc", icon: <Calendar size={20} />,        page: "/calendar" },
+  { name: "Tìm kiếm",      icon: <Search size={20} />,          page: "/search" },
+  { name: "Ghi nhận",      icon: <DownloadCloud size={20} />,   page: "/violation-management" },
+  { name: "Lịch BM",       icon: <Store size={20} />,           page: "/visit-plan-management" },
 ];
 
 const Sidebar = () => {

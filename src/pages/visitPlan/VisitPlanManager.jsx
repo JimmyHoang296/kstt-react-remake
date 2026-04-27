@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import { Eye, Plus } from "lucide-react";
+import { Eye, Plus, CalendarDays } from "lucide-react";
 import { getTodayDateString, toDateInputValue } from "../../assets/helpers";
 import { api } from "../../api";
 import { useManagerPage } from "../../hooks/useManagerPage";
@@ -8,160 +8,179 @@ import Pagination from "../../components/Pagination";
 import LoadingModal from "../../components/LoadingModal";
 import VisitPlanDetailModal from "./VisitPlanDetailModal";
 
+const INPUT = "border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent";
+
+const StatusBadge = ({ status }) => {
+  const map = {
+    pending:   'bg-yellow-100 text-yellow-800',
+    completed: 'bg-green-100  text-green-800',
+    cancelled: 'bg-gray-100   text-gray-600',
+  };
+  return (
+    <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${map[status] ?? 'bg-gray-100 text-gray-600'}`}>
+      {status || '—'}
+    </span>
+  );
+};
+
 const planFilterFn = (p, q) =>
-  (!q.site || p.site?.toLowerCase().includes(q.site.toLowerCase())) &&
+  (!q.site   || p.site?.toLowerCase().includes(q.site.toLowerCase()))   &&
   (!q.status || p.status?.toLowerCase().includes(q.status.toLowerCase()));
 
 const VisitPlanManager = () => {
-  const data = useStore((state) => state.data);
-  const setData = useStore((state) => state.setData);
+  const data     = useStore((state) => state.data);
+  const setData  = useStore((state) => state.setData);
   const addToast = useStore((state) => state.addToast);
+
   const {
-    items: plans,
-    setItems: setPlans,
+    items: plans, setItems: setPlans,
     searchQuery,
-    currentPage,
-    setCurrentPage,
-    isModalOpen,
-    selectedItem: selectedPlan,
-    loading,
-    setLoading,
-    paginatedItems: paginatedPlans,
-    totalPages,
-    handleSearchChange,
-    openModal,
-    closeModal,
+    currentPage, setCurrentPage,
+    isModalOpen, selectedItem: selectedPlan,
+    loading, setLoading,
+    paginatedItems: paginatedPlans, totalPages,
+    handleSearchChange, resetSearch,
+    openModal, closeModal,
   } = useManagerPage({
     initialItems: data.visitPlan || [],
-    initialSearch: { site: "", status: "" },
+    initialSearch: { site: '', status: '' },
     filterFn: planFilterFn,
   });
 
-  useEffect(() => {
-    setData((prev) => ({ ...prev, visitPlan: plans }));
-  }, [plans]);
+  useEffect(() => { setData((prev) => ({ ...prev, visitPlan: plans })); }, [plans]);
 
   async function handleSaveNew(plan) {
     const newPlan = { ...plan, user: data.user.id };
     try {
       setLoading(true);
-      const result = await api.createVisitPlan(newPlan);
-      if (result.success) {
-        newPlan.id = result.data;
-        setPlans((prev) => [...prev, newPlan]);
-        closeModal();
-        addToast("Thêm kế hoạch thành công");
-      } else {
-        addToast("Thêm thất bại", "error");
-      }
-    } catch (error) {
-      addToast("Lỗi kết nối, thử lại sau", "error");
-    } finally {
-      setLoading(false);
-    }
+      const r = await api.createVisitPlan(newPlan);
+      if (r.success) { newPlan.id = r.data; setPlans((p) => [...p, newPlan]); closeModal(); addToast('Thêm kế hoạch thành công'); }
+      else addToast('Thêm thất bại', 'error');
+    } catch { addToast('Lỗi kết nối, thử lại sau', 'error'); }
+    finally { setLoading(false); }
   }
 
   async function handleUpdate(plan) {
     try {
       setLoading(true);
-      const result = await api.updateVisitPlan(plan);
-      if (result.success) {
-        setPlans((prev) => prev.map((p) => (p.id === plan.id ? plan : p)));
-        closeModal();
-        addToast("Cập nhật kế hoạch thành công");
-      } else {
-        addToast("Cập nhật thất bại", "error");
-      }
-    } catch (error) {
-      addToast("Lỗi kết nối, thử lại sau", "error");
-    } finally {
-      setLoading(false);
-    }
+      const r = await api.updateVisitPlan(plan);
+      if (r.success) { setPlans((p) => p.map((x) => (x.id === plan.id ? plan : x))); closeModal(); addToast('Cập nhật kế hoạch thành công'); }
+      else addToast('Cập nhật thất bại', 'error');
+    } catch { addToast('Lỗi kết nối, thử lại sau', 'error'); }
+    finally { setLoading(false); }
   }
 
   async function handleDelete(planId) {
-    if (!confirm("Bạn muốn xóa kế hoạch này?")) return;
+    if (!confirm('Bạn muốn xóa kế hoạch này?')) return;
     try {
       setLoading(true);
-      const result = await api.deleteVisitPlan(planId);
-      if (result.success) {
-        setPlans((prev) => prev.filter((p) => p.id !== planId));
-        closeModal();
-        addToast("Đã xóa kế hoạch");
-      } else {
-        addToast("Xóa thất bại", "error");
-      }
-    } catch (error) {
-      addToast("Lỗi kết nối, thử lại sau", "error");
-    } finally {
-      setLoading(false);
-    }
+      const r = await api.deleteVisitPlan(planId);
+      if (r.success) { setPlans((p) => p.filter((x) => x.id !== planId)); closeModal(); addToast('Đã xóa kế hoạch'); }
+      else addToast('Xóa thất bại', 'error');
+    } catch { addToast('Lỗi kết nối, thử lại sau', 'error'); }
+    finally { setLoading(false); }
   }
 
   return (
-    <div className="p-6 bg-white rounded-xl shadow-md">
+    <div className="bg-white rounded-xl shadow-sm border border-gray-100">
       {/* Header */}
-      <div className="mb-6 border-b pb-4 flex justify-between items-center">
-        <h2 className="text-2xl font-bold">Đăng ký đổ dữ liệu</h2>
+      <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+        <h2 className="text-xl font-bold text-gray-900">Đăng ký đổ dữ liệu</h2>
         <button
-          onClick={() => openModal({ date: getTodayDateString(), site: "", path: "", status: "pending" })}
-          className="bg-indigo-500 text-white px-4 py-2 rounded-lg hover:bg-indigo-600 flex items-center"
+          onClick={() => openModal({ date: getTodayDateString(), site: '', path: '', status: 'pending' })}
+          className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors"
         >
-          <Plus className="mr-2" /> Kế hoạch mới
+          <Plus className="w-4 h-4" /> Kế hoạch mới
         </button>
       </div>
 
       {/* Search */}
-      <div className="grid grid-cols-2 gap-3 mb-4">
-        <input
-          type="text"
-          name="site"
-          placeholder="Tìm theo site"
-          value={searchQuery.site}
-          onChange={handleSearchChange}
-          className="p-2 border rounded-md"
-        />
-        <input
-          type="text"
-          name="status"
-          placeholder="Tìm theo trạng thái"
-          value={searchQuery.status}
-          onChange={handleSearchChange}
-          className="p-2 border rounded-md"
-        />
+      <div className="px-6 py-4 border-b border-gray-100 bg-gray-50">
+        <div className="flex flex-wrap gap-3 items-end">
+          <div className="flex-1 min-w-[160px]">
+            <label className="block text-xs font-medium text-gray-500 mb-1">Site</label>
+            <input name="site" value={searchQuery.site} onChange={handleSearchChange} placeholder="Tìm theo site..." className={INPUT} />
+          </div>
+          <div className="w-44">
+            <label className="block text-xs font-medium text-gray-500 mb-1">Trạng thái</label>
+            <input name="status" value={searchQuery.status} onChange={handleSearchChange} placeholder="Tìm theo trạng thái..." className={INPUT} />
+          </div>
+          <button onClick={resetSearch} className="inline-flex items-center gap-2 px-3 py-2 bg-white border border-gray-200 text-gray-600 text-sm rounded-lg hover:bg-gray-50 transition-colors">
+            Xoá lọc
+          </button>
+        </div>
+      </div>
+
+      {/* Result count */}
+      <div className="px-6 pt-3 pb-1">
+        <p className="text-xs text-gray-400">
+          Hiển thị <span className="font-medium text-gray-600">{paginatedPlans.length}</span> / <span className="font-medium text-gray-600">{plans.length}</span> kế hoạch
+        </p>
       </div>
 
       {/* Table */}
-      <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200 text-sm">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-4 py-2 text-left">Ngày</th>
-              <th className="px-4 py-2 text-left">Site</th>
-              <th className="px-4 py-2 text-left">Path</th>
-              <th className="px-4 py-2 text-left">Trạng thái</th>
-              <th className="px-4 py-2 text-center">Hành động</th>
-            </tr>
-          </thead>
-          <tbody>
-            {paginatedPlans.map((plan) => (
-              <tr key={plan.id}>
-                <td className="px-4 py-2">{toDateInputValue(plan.date)}</td>
-                <td className="px-4 py-2">{plan.site}</td>
-                <td className="px-4 py-2">{plan.path}</td>
-                <td className="px-4 py-2">{plan.status}</td>
-                <td className="px-4 py-2 text-center">
-                  <button onClick={() => openModal(plan)} className="text-indigo-600 hover:text-indigo-900">
-                    <Eye className="w-5 h-5 mx-auto" />
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      {paginatedPlans.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-16 text-gray-400">
+          <CalendarDays className="w-10 h-10 mb-3 opacity-40" />
+          <p className="text-sm">Không có kế hoạch nào</p>
+        </div>
+      ) : (
+        <>
+          <div className="hidden md:block overflow-x-auto">
+            <table className="min-w-full">
+              <thead className="bg-gray-50 border-y border-gray-100">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Ngày</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Site</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Path</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Trạng thái</th>
+                  <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Chi tiết</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {paginatedPlans.map((plan) => (
+                  <tr key={plan.id} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">{toDateInputValue(plan.date)}</td>
+                    <td className="px-4 py-3 text-sm text-gray-700 font-medium">{plan.site}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600 max-w-xs truncate">{plan.path}</td>
+                    <td className="px-4 py-3"><StatusBadge status={plan.status} /></td>
+                    <td className="px-4 py-3 text-center">
+                      <button onClick={() => openModal(plan)} className="p-1.5 rounded-lg text-indigo-600 hover:bg-indigo-50 transition-colors">
+                        <Eye className="w-4 h-4" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
 
-      <Pagination totalPages={totalPages} currentPage={currentPage} setCurrentPage={setCurrentPage} />
+          {/* Mobile cards */}
+          <div className="block md:hidden divide-y divide-gray-100">
+            {paginatedPlans.map((plan) => (
+              <div key={plan.id} className="px-4 py-4 space-y-1.5">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <p className="text-sm font-medium text-gray-800">{plan.site}</p>
+                    <p className="text-xs text-gray-500 mt-0.5">{plan.path}</p>
+                  </div>
+                  <button onClick={() => openModal(plan)} className="shrink-0 p-1.5 rounded-lg text-indigo-600 hover:bg-indigo-50">
+                    <Eye className="w-4 h-4" />
+                  </button>
+                </div>
+                <div className="flex items-center gap-3">
+                  <StatusBadge status={plan.status} />
+                  <span className="text-xs text-gray-400">{toDateInputValue(plan.date)}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="px-6 pb-4">
+            <Pagination totalPages={totalPages} currentPage={currentPage} setCurrentPage={setCurrentPage} />
+          </div>
+        </>
+      )}
 
       {isModalOpen && (
         <VisitPlanDetailModal
@@ -172,7 +191,7 @@ const VisitPlanManager = () => {
           onDelete={handleDelete}
         />
       )}
-      {loading && <LoadingModal message="Loading..." />}
+      {loading && <LoadingModal message="Đang xử lý..." />}
     </div>
   );
 };

@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import { Eye, Plus } from "lucide-react";
+import { Eye, FileText, Plus } from "lucide-react";
 import { downloadFile, getTodayDateString, toDateInputValue } from "../../assets/helpers";
 import { api } from "../../api";
 import { useManagerPage } from "../../hooks/useManagerPage";
@@ -8,48 +8,38 @@ import Pagination from "../../components/Pagination";
 import LoadingModal from "../../components/LoadingModal";
 import ViolationDetailModal from "./ViolationDetailModal";
 
+const INPUT = "border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent";
+
 const violationFilterFn = (task, q) =>
-  (!q.sap || task.sap?.toLowerCase().includes(q.sap.toLowerCase())) &&
+  (!q.sap  || task.sap?.toLowerCase().includes(q.sap.toLowerCase()))  &&
   (!q.audit || task.audit?.toLowerCase().includes(q.audit.toLowerCase()));
 
 const ViolationManager = () => {
-  const data = useStore((state) => state.data);
-  const setData = useStore((state) => state.setData);
+  const data     = useStore((state) => state.data);
+  const setData  = useStore((state) => state.setData);
   const addToast = useStore((state) => state.addToast);
+
   const {
-    items: violations,
-    setItems: setViolations,
+    items: violations, setItems: setViolations,
     searchQuery,
-    currentPage,
-    setCurrentPage,
-    isModalOpen,
-    selectedItem: selectedTask,
-    loading,
-    setLoading,
-    paginatedItems: paginatedTasks,
-    totalPages,
-    handleSearchChange,
-    resetSearch,
-    openModal,
-    closeModal,
+    currentPage, setCurrentPage,
+    isModalOpen, selectedItem: selectedTask,
+    loading, setLoading,
+    paginatedItems: paginatedTasks, totalPages,
+    handleSearchChange, resetSearch,
+    openModal, closeModal,
   } = useManagerPage({
     initialItems: data.violations,
-    initialSearch: { sap: "", audit: "" },
+    initialSearch: { sap: '', audit: '' },
     filterFn: violationFilterFn,
   });
 
-  useEffect(() => {
-    setData((prev) => ({ ...prev, violations }));
-  }, [violations]);
+  useEffect(() => { setData((prev) => ({ ...prev, violations })); }, [violations]);
 
   const isValidViolation = (task) => {
-    if (!task.sap) {
-      alert("Bắt buộc nhập mã CH");
-      return false;
-    }
+    if (!task.sap) { addToast('Bắt buộc nhập mã CH', 'error'); return false; }
     if (!task.violations?.length || !task.violations.filter((v) => v.violation).length) {
-      alert("Sự vụ bắt buộc phải có ghi nhận");
-      return false;
+      addToast('Sự vụ bắt buộc phải có ghi nhận', 'error'); return false;
     }
     return true;
   };
@@ -58,59 +48,33 @@ const ViolationManager = () => {
     if (!isValidViolation(updatedTask)) return;
     try {
       setLoading(true);
-      const result = await api.updateViolation(updatedTask);
-      if (result.success) {
-        setViolations((prev) =>
-          prev.map((v) => (v.id === updatedTask.id ? updatedTask : v))
-        );
-        closeModal();
-        addToast("Cập nhật ghi nhận thành công");
-      } else {
-        addToast("Cập nhật thất bại", "error");
-      }
-    } catch (error) {
-      addToast("Lỗi kết nối, thử lại sau", "error");
-    } finally {
-      setLoading(false);
-    }
+      const r = await api.updateViolation(updatedTask);
+      if (r.success) { setViolations((p) => p.map((v) => (v.id === updatedTask.id ? updatedTask : v))); closeModal(); addToast('Cập nhật ghi nhận thành công'); }
+      else addToast('Cập nhật thất bại', 'error');
+    } catch { addToast('Lỗi kết nối, thử lại sau', 'error'); }
+    finally { setLoading(false); }
   }
 
   async function handleCreateRecord(taskId) {
-    if (!confirm("Bạn muốn tạo biên bản sự vụ này")) return;
+    if (!confirm('Bạn muốn tạo biên bản sự vụ này')) return;
     try {
       setLoading(true);
-      const result = await api.createRecord(taskId);
-      if (result.success) {
-        downloadFile(result.data);
-        closeModal();
-        addToast("Tạo biên bản thành công");
-      } else {
-        addToast("Tạo biên bản thất bại", "error");
-      }
-    } catch (error) {
-      addToast("Lỗi kết nối, thử lại sau", "error");
-    } finally {
-      setLoading(false);
-    }
+      const r = await api.createRecord(taskId);
+      if (r.success) { downloadFile(r.data); closeModal(); addToast('Tạo biên bản thành công'); }
+      else addToast('Tạo biên bản thất bại', 'error');
+    } catch { addToast('Lỗi kết nối, thử lại sau', 'error'); }
+    finally { setLoading(false); }
   }
 
   async function handleDelete(taskId) {
-    if (!confirm("Bạn muốn xóa sự vụ này")) return;
+    if (!confirm('Bạn muốn xóa ghi nhận này?')) return;
     try {
       setLoading(true);
-      const result = await api.deleteViolation(taskId);
-      if (result.success) {
-        setViolations((prev) => prev.filter((v) => v.id !== taskId));
-        closeModal();
-        addToast("Đã xóa ghi nhận");
-      } else {
-        addToast("Xóa thất bại", "error");
-      }
-    } catch (error) {
-      addToast("Lỗi kết nối, thử lại sau", "error");
-    } finally {
-      setLoading(false);
-    }
+      const r = await api.deleteViolation(taskId);
+      if (r.success) { setViolations((p) => p.filter((v) => v.id !== taskId)); closeModal(); addToast('Đã xóa ghi nhận'); }
+      else addToast('Xóa thất bại', 'error');
+    } catch { addToast('Lỗi kết nối, thử lại sau', 'error'); }
+    finally { setLoading(false); }
   }
 
   async function handleSaveNew(newTask) {
@@ -119,140 +83,115 @@ const ViolationManager = () => {
     if (!isValidViolation(newTask)) return;
     try {
       setLoading(true);
-      const result = await api.createViolation(newTask);
-      if (result.success) {
-        newTask.id = result.data;
-        newTask.violations = newTask.violations.map((v, i) => ({
-          ...v,
-          vId: newTask.id + "_" + (i + 1),
-        }));
-        setViolations((prev) => [...prev, newTask]);
+      const r = await api.createViolation(newTask);
+      if (r.success) {
+        newTask.id = r.data;
+        newTask.violations = newTask.violations.map((v, i) => ({ ...v, vId: newTask.id + '_' + (i + 1) }));
+        setViolations((p) => [...p, newTask]);
         closeModal();
-        addToast("Thêm ghi nhận thành công");
-      } else {
-        addToast("Thêm thất bại", "error");
-      }
-    } catch (error) {
-      addToast("Lỗi kết nối, thử lại sau", "error");
-    } finally {
-      setLoading(false);
-    }
+        addToast('Thêm ghi nhận thành công');
+      } else addToast('Thêm thất bại', 'error');
+    } catch { addToast('Lỗi kết nối, thử lại sau', 'error'); }
+    finally { setLoading(false); }
   }
 
   return (
-    <div className="p-6 bg-white rounded-xl shadow-md">
+    <div className="bg-white rounded-xl shadow-sm border border-gray-100">
       {/* Header */}
-      <div className="mb-6 border-b pb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <h2 className="text-2xl font-bold text-gray-800">Tổng hợp ghi nhận</h2>
+      <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+        <h2 className="text-xl font-bold text-gray-900">Tổng hợp ghi nhận</h2>
         <button
           onClick={() => openModal({ date: getTodayDateString(), violations: [] })}
-          className="bg-indigo-500 text-white px-4 py-2 rounded-lg hover:bg-indigo-600 transition-colors flex items-center justify-center"
+          className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors"
         >
-          <Plus className="mr-2" /> Ghi nhận mới
+          <Plus className="w-4 h-4" /> Ghi nhận mới
         </button>
       </div>
 
-      {/* Search section */}
-      <div className="mb-2">
-        <h3 className="text-xl font-bold mb-2">Tìm ghi nhận</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-          <div>
-            <label className="block text-gray-700 text-sm mb-1">Mã CH</label>
-            <input
-              type="text"
-              name="sap"
-              value={searchQuery.sap}
-              onChange={handleSearchChange}
-              className="w-full p-2 border rounded-md"
-            />
+      {/* Search */}
+      <div className="px-6 py-4 border-b border-gray-100 bg-gray-50">
+        <div className="flex flex-wrap gap-3 items-end">
+          <div className="flex-1 min-w-[160px]">
+            <label className="block text-xs font-medium text-gray-500 mb-1">Mã CH</label>
+            <input name="sap" value={searchQuery.sap} onChange={handleSearchChange} placeholder="Tìm theo mã CH..." className={INPUT} />
           </div>
-          <div>
-            <label className="block text-gray-700 text-sm mb-1">Đợt kiểm tra</label>
-            <input
-              type="text"
-              name="audit"
-              value={searchQuery.audit}
-              onChange={handleSearchChange}
-              className="w-full p-2 border rounded-md"
-            />
+          <div className="flex-1 min-w-[160px]">
+            <label className="block text-xs font-medium text-gray-500 mb-1">Đợt kiểm tra</label>
+            <input name="audit" value={searchQuery.audit} onChange={handleSearchChange} placeholder="Tìm theo đợt kiểm tra..." className={INPUT} />
           </div>
-          <div className="flex sm:justify-end items-end">
-            <button
-              onClick={resetSearch}
-              className="bg-gray-300 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-400 w-full sm:w-auto"
-            >
-              Clear Search
-            </button>
-          </div>
+          <button onClick={resetSearch} className="inline-flex items-center gap-2 px-3 py-2 bg-white border border-gray-200 text-gray-600 text-sm rounded-lg hover:bg-gray-50 transition-colors">
+            Xoá lọc
+          </button>
         </div>
       </div>
 
-      {/* List Section */}
-      <div className="pt-4">
-        <h3 className="text-xl font-bold mb-4">Danh sách ghi nhận</h3>
+      {/* Result count */}
+      <div className="px-6 pt-3 pb-1">
+        <p className="text-xs text-gray-400">
+          Hiển thị <span className="font-medium text-gray-600">{paginatedTasks.length}</span> / <span className="font-medium text-gray-600">{violations.length}</span> ghi nhận
+        </p>
+      </div>
 
-        {/* Table view for desktop */}
-        <div className="hidden md:block overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200 text-sm">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">Đợt kiểm tra</th>
-                <th className="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">Ngày kiểm tra</th>
-                <th className="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">Mã CH</th>
-                <th className="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">Tên CH</th>
-                <th className="px-4 py-3 text-center font-medium text-gray-500 uppercase tracking-wider">Hành động</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {paginatedTasks.map((task) => (
-                <tr key={task.id}>
-                  <td className="px-4 py-3 max-w-80 text-wrap">{task.audit}</td>
-                  <td className="px-4 py-3">{toDateInputValue(task.date)}</td>
-                  <td className="px-4 py-3">{task.sap}</td>
-                  <td className="px-4 py-3">{task.store}</td>
-                  <td className="px-4 py-3 text-center">
-                    <button onClick={() => openModal(task)} className="text-indigo-600 hover:text-indigo-900">
-                      <Eye className="w-5 h-5 mx-auto" />
-                    </button>
-                  </td>
+      {/* Desktop table */}
+      {paginatedTasks.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-16 text-gray-400">
+          <FileText className="w-10 h-10 mb-3 opacity-40" />
+          <p className="text-sm">Không có ghi nhận nào</p>
+        </div>
+      ) : (
+        <>
+          <div className="hidden md:block overflow-x-auto">
+            <table className="min-w-full">
+              <thead className="bg-gray-50 border-y border-gray-100">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Đợt kiểm tra</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Ngày kiểm tra</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Mã CH</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Tên CH</th>
+                  <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Chi tiết</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {paginatedTasks.map((task) => (
+                  <tr key={task.id} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-4 py-3 text-sm text-gray-700 max-w-xs truncate">{task.audit}</td>
+                    <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">{toDateInputValue(task.date)}</td>
+                    <td className="px-4 py-3 text-sm text-gray-700 font-medium">{task.sap}</td>
+                    <td className="px-4 py-3 text-sm text-gray-700">{task.store}</td>
+                    <td className="px-4 py-3 text-center">
+                      <button onClick={() => openModal(task)} className="p-1.5 rounded-lg text-indigo-600 hover:bg-indigo-50 transition-colors">
+                        <Eye className="w-4 h-4" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
 
-        {/* Card view for mobile */}
-        <div className="block md:hidden space-y-4">
-          {paginatedTasks.map((task) => (
-            <div key={task.id} className="p-4 border rounded-lg shadow-sm bg-white space-y-2">
-              <div>
-                <span className="text-xs font-semibold text-gray-500">Đợt kiểm tra:</span>
-                <p className="text-sm">{task.audit}</p>
+          {/* Mobile cards */}
+          <div className="block md:hidden divide-y divide-gray-100">
+            {paginatedTasks.map((task) => (
+              <div key={task.id} className="px-4 py-4 space-y-1.5">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <p className="text-sm font-medium text-gray-800">{task.sap} — {task.store}</p>
+                    <p className="text-xs text-gray-500 mt-0.5">{task.audit}</p>
+                  </div>
+                  <button onClick={() => openModal(task)} className="shrink-0 p-1.5 rounded-lg text-indigo-600 hover:bg-indigo-50">
+                    <Eye className="w-4 h-4" />
+                  </button>
+                </div>
+                <p className="text-xs text-gray-400">{toDateInputValue(task.date)}</p>
               </div>
-              <div>
-                <span className="text-xs font-semibold text-gray-500">Ngày kiểm tra:</span>
-                <p className="text-sm">{toDateInputValue(task.date)}</p>
-              </div>
-              <div>
-                <span className="text-xs font-semibold text-gray-500">Mã CH:</span>
-                <p className="text-sm">{task.sap}</p>
-              </div>
-              <div>
-                <span className="text-xs font-semibold text-gray-500">Tên CH:</span>
-                <p className="text-sm">{task.store}</p>
-              </div>
-              <div className="flex justify-end">
-                <button onClick={() => openModal(task)} className="text-indigo-600 hover:text-indigo-900 flex items-center gap-2">
-                  <Eye className="w-5 h-5" />
-                  <p>Xem chi tiết</p>
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
 
-        <Pagination totalPages={totalPages} currentPage={currentPage} setCurrentPage={setCurrentPage} />
-      </div>
+          <div className="px-6 pb-4">
+            <Pagination totalPages={totalPages} currentPage={currentPage} setCurrentPage={setCurrentPage} />
+          </div>
+        </>
+      )}
 
       {isModalOpen && (
         <ViolationDetailModal
@@ -265,7 +204,7 @@ const ViolationManager = () => {
           onCreateRecord={handleCreateRecord}
         />
       )}
-      {loading && <LoadingModal message="Loading..." />}
+      {loading && <LoadingModal message="Đang xử lý..." />}
     </div>
   );
 };

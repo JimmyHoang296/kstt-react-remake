@@ -33,6 +33,7 @@ export const api = {
 
   // Calendar
   updateWork: (data) => apiFetch('updateWork', data),
+  getTeamCalendar: (data) => apiFetch('getTeamCalendar', data),
 
   // Store Search (different endpoint)
   searchStore: (query) => apiFetch('searchStore', query, STORE_SEARCH_URL),
