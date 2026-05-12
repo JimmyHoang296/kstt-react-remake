@@ -31,13 +31,22 @@ const navItemsLeader = [
   { name: "Lịch BM",       icon: <Store size={20} />,           page: "/visit-plan-management" },
 ];
 
+const navItemsDirector = [
+  { name: "Dashboard",     icon: <LayoutDashboard size={20} />, page: "/dashboard" },
+  { name: "Sự vụ",         icon: <ListTodo size={20} />,        page: "/task-management" },
+  { name: "Lịch làm việc", icon: <Calendar size={20} />,        page: "/calendar" },
+];
+
 const Sidebar = () => {
   const user = useStore((state) => state.data.user);
   const isSidebarOpen = useStore((state) => state.isSidebarOpen);
   const toggleSidebar = useStore((state) => state.toggleSidebar);
   const location = useLocation();
 
-  const navItems = user?.role === "emp" ? navItemsEmp : navItemsLeader;
+  const navItems =
+    user?.role === "director" ? navItemsDirector :
+    user?.role === "emp"      ? navItemsEmp :
+                                navItemsLeader;
 
   // On mobile, close sidebar after navigating
   const handleNavClick = () => {
