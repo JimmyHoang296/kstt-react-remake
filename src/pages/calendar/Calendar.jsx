@@ -300,12 +300,167 @@ const TeamCalendar = ({ weekdays, hodName }) => {
   );
 };
 
+// ─── Director calendar (all users) ───────────────────────────────────────────
+
+const DirectorCalendar = ({ weekdays, directorName }) => {
+  const [emps, setEmps] = useState([]);
+  const [allCalendar, setAllCalendar] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  const fetchAll = async () => {
+    setLoading(true);
+    try {
+      const result = await api.getAllCalendar({
+        directorName,
+        startDate: weekdays[0].toISOString().split("T")[0],
+        endDate: weekdays[4].toISOString().split("T")[0],
+      });
+      if (result.success) {
+        setEmps(result.data.emps);
+        setAllCalendar(result.data.calendar);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAll();
+  }, [weekdays]);
+
+  const getCell = (empUser, day) =>
+    allCalendar.find(
+      (item) =>
+        item.user?.toString().toLowerCase() === empUser.toLowerCase() &&
+        new Date(item.date).toDateString() === day.toDateString()
+    );
+
+  const totalByDay = weekdays.map((day) => {
+    const cells = emps.map((emp) => getCell(emp.user, day)).filter(Boolean);
+    const stores = cells.reduce((s, c) => s + (Number(c.storeNumber) || 0), 0);
+    const marts = cells.reduce((s, c) => s + (Number(c.martNumber) || 0), 0);
+    return { stores, marts };
+  });
+
+  if (loading) {
+    return <div className="text-center py-12 text-gray-400 text-sm">Đang tải dữ liệu...</div>;
+  }
+
+  return (
+    <>
+      <div className="flex justify-end mb-4">
+        <button
+          onClick={fetchAll}
+          className="flex items-center gap-1.5 px-3 py-1.5 border rounded text-sm hover:bg-gray-100"
+        >
+          <RefreshCw className="w-4 h-4" /> Làm mới
+        </button>
+      </div>
+
+      <div className="overflow-x-auto">
+        <table className="min-w-full border-collapse text-sm">
+          <thead>
+            <tr className="bg-gray-50">
+              <th className="border px-3 py-2 text-left min-w-[150px] text-gray-600 font-semibold">
+                Nhân viên
+              </th>
+              {weekdays.map((day, i) => (
+                <th key={i} className="border px-3 py-2 text-center min-w-[200px]">
+                  <div className="font-semibold text-gray-700">
+                    {day.toLocaleDateString("vi-VN", { weekday: "long" })}
+                  </div>
+                  <div className="text-xs text-gray-400 font-normal">
+                    {day.toLocaleDateString("vi-VN")}
+                  </div>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {emps.length === 0 ? (
+              <tr>
+                <td colSpan={6} className="text-center py-10 text-gray-400">
+                  Không có dữ liệu
+                </td>
+              </tr>
+            ) : (
+              <>
+                {emps.map((emp) => (
+                  <tr key={emp.user} className="hover:bg-gray-50">
+                    <td className="border px-3 py-2 font-medium text-gray-800 whitespace-nowrap align-top">
+                      {emp.name}
+                    </td>
+                    {weekdays.map((day, i) => {
+                      const cell = getCell(emp.user, day);
+                      return (
+                        <td key={i} className="border px-3 py-2 align-top">
+                          {cell ? (
+                            <div className="space-y-1.5">
+                              <p className="text-gray-700 text-xs leading-relaxed whitespace-pre-wrap">
+                                {cell.work}
+                              </p>
+                              <div className="flex gap-1.5 flex-wrap">
+                                {Number(cell.storeNumber) > 0 && (
+                                  <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">
+                                    CH: {cell.storeNumber}
+                                  </span>
+                                )}
+                                {Number(cell.martNumber) > 0 && (
+                                  <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">
+                                    SM: {cell.martNumber}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="text-gray-300">—</span>
+                          )}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+
+                <tr className="bg-gray-50 font-semibold text-gray-700">
+                  <td className="border px-3 py-2">Tổng</td>
+                  {totalByDay.map((total, i) => (
+                    <td key={i} className="border px-3 py-2 text-center">
+                      <div className="flex gap-1.5 justify-center flex-wrap">
+                        {total.stores > 0 && (
+                          <span className="text-xs bg-blue-200 text-blue-800 px-2 py-0.5 rounded-full">
+                            CH: {total.stores}
+                          </span>
+                        )}
+                        {total.marts > 0 && (
+                          <span className="text-xs bg-green-200 text-green-800 px-2 py-0.5 rounded-full">
+                            SM: {total.marts}
+                          </span>
+                        )}
+                        {total.stores === 0 && total.marts === 0 && (
+                          <span className="text-gray-300">—</span>
+                        )}
+                      </div>
+                    </td>
+                  ))}
+                </tr>
+              </>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </>
+  );
+};
+
 // ─── Main Calendar page ───────────────────────────────────────────────────────
 
 const Calendar = () => {
   const data = useStore((state) => state.data);
   const { id: userId, name, role } = data.user;
   const isHod = role === "hod";
+  const isDirector = role === "director";
 
   const [activeTab, setActiveTab] = useState("personal");
   const [currentWeekStart, setCurrentWeekStart] = useState(new Date());
@@ -325,12 +480,13 @@ const Calendar = () => {
     <div className="bg-white rounded-xl shadow-md p-6">
       <h2 className="text-2xl font-bold mb-3">Lịch làm việc</h2>
 
-      {/* Tabs (HOD only) */}
-      {isHod && (
+      {/* Tabs (HOD or Director) */}
+      {(isHod || isDirector) && (
         <div className="flex gap-0 mb-5 border-b">
           {[
             { key: "personal", label: "Lịch của tôi" },
-            { key: "team", label: "Lịch nhóm" },
+            ...(isHod ? [{ key: "team", label: "Lịch nhóm" }] : []),
+            ...(isDirector ? [{ key: "all", label: "Lịch toàn bộ" }] : []),
           ].map((tab) => (
             <button
               key={tab.key}
@@ -389,6 +545,10 @@ const Calendar = () => {
 
       {activeTab === "team" && isHod && (
         <TeamCalendar weekdays={weekdays} hodName={name} />
+      )}
+
+      {activeTab === "all" && isDirector && (
+        <DirectorCalendar weekdays={weekdays} directorName={name} />
       )}
     </div>
   );
