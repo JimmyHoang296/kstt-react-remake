@@ -14,6 +14,7 @@ import { Toast } from "./components/Toast";
 const App = () => {
   const isLogin = useStore((state) => state.isLogin);
   const isSidebarOpen = useStore((state) => state.isSidebarOpen);
+  const userRole = useStore((state) => state.data.user?.role);
 
   return (
     <>
@@ -27,14 +28,14 @@ const App = () => {
             <Header />
             <main className="flex-1 p-4 lg:p-6 overflow-auto">
               <Routes>
-                <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                <Route path="/" element={<Navigate to={userRole === "director" ? "/calendar" : "/dashboard"} replace />} />
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/task-management" element={<TaskManager />} />
                 <Route path="/calendar" element={<Calendar />} />
                 <Route path="/search" element={<SearchStore />} />
                 <Route path="/violation-management" element={<ViolationManager />} />
                 <Route path="/visit-plan-management" element={<VisitPlanManager />} />
-                <Route path="*" element={<Navigate to="/dashboard" replace />} />
+                <Route path="*" element={<Navigate to={userRole === "director" ? "/calendar" : "/dashboard"} replace />} />
               </Routes>
             </main>
           </div>

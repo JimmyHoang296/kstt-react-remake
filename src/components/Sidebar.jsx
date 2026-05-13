@@ -32,9 +32,7 @@ const navItemsLeader = [
 ];
 
 const navItemsDirector = [
-  { name: "Dashboard",     icon: <LayoutDashboard size={20} />, page: "/dashboard" },
-  { name: "Sự vụ",         icon: <ListTodo size={20} />,        page: "/task-management" },
-  { name: "Lịch làm việc", icon: <Calendar size={20} />,        page: "/calendar" },
+  { name: "Lịch làm việc", icon: <Calendar size={20} />, page: "/calendar" },
 ];
 
 const Sidebar = () => {

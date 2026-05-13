@@ -462,7 +462,7 @@ const Calendar = () => {
   const isHod = role === "hod";
   const isDirector = role === "director";
 
-  const [activeTab, setActiveTab] = useState("personal");
+  const [activeTab, setActiveTab] = useState(isDirector ? "all" : "personal");
   const [currentWeekStart, setCurrentWeekStart] = useState(new Date());
   const [calendar, setCalendar] = useState(data.calendar);
 
