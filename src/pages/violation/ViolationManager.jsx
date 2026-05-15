@@ -61,8 +61,8 @@ const ViolationManager = () => {
       setLoading(true);
       const r = await api.createRecord(taskId);
       if (r.success) { downloadFile(r.data); closeModal(); addToast('Tạo biên bản thành công'); }
-      else addToast('Tạo biên bản thất bại', 'error');
-    } catch { addToast('Lỗi kết nối, thử lại sau', 'error'); }
+      else addToast(r.message || 'Tạo biên bản thất bại', 'error');
+    } catch (err) { addToast('Lỗi kết nối: ' + (err?.message || 'thử lại sau'), 'error'); }
     finally { setLoading(false); }
   }
 
