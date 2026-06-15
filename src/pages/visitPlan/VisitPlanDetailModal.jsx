@@ -33,9 +33,9 @@ const VisitPlanDetailModal = ({ plan, onClose, onSave, onUpdate, onDelete }) => 
         </div>
 
         {/* Form */}
-        <div className="grid grid-cols-2 gap-4 mb-6">
+        <div className="flex flex-col gap-4 mb-6">
           <div>
-            <label className="block text-sm">Ngày</label>
+            <label className="block text-sm">Ngày kiểm tra</label>
             <input
               type="date"
               name="date"
@@ -45,7 +45,7 @@ const VisitPlanDetailModal = ({ plan, onClose, onSave, onUpdate, onDelete }) => 
             />
           </div>
           <div>
-            <label className="block text-sm">Site</label>
+            <label className="block text-sm">Mã CH</label>
             <input
               type="text"
               name="site"
@@ -53,29 +53,6 @@ const VisitPlanDetailModal = ({ plan, onClose, onSave, onUpdate, onDelete }) => 
               onChange={handleChange}
               className="w-full p-2 border rounded-md"
             />
-          </div>
-          <div>
-            <label className="block text-sm">Path</label>
-            <input
-              type="text"
-              name="path"
-              value={formData.path || ""}
-              onChange={handleChange}
-              className="w-full p-2 border rounded-md"
-            />
-          </div>
-          <div>
-            <label className="block text-sm">Trạng thái</label>
-            <select
-              name="status"
-              value={formData.status || "pending"}
-              onChange={handleChange}
-              className="w-full p-2 border rounded-md"
-            >
-              <option value="pending">Pending</option>
-              <option value="done">Done</option>
-              <option value="cancelled">Cancelled</option>
-            </select>
           </div>
         </div>
 

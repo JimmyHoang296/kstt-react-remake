@@ -6,10 +6,10 @@ const CATEGORIES = [
   { label: "Tồn kho", exp: "Tồn ảo, tồn âm,...", key: "tonKho", causeKey: "cauTonKho" },
   { label: "Gian lận", exp: "Hủy dòng, trả hàng, lấy hàng, tích điểm trục lợi", key: "gianLan", causeKey: "cauGianLan" },
   { label: "Kiểm kê", exp: "Gian lận kiểm kê", key: "kiemKe", causeKey: "cauKiemKe" },
-  { label: "Bán hàng", exp: "Thu thay chờ coupon,", key: "banHang", causeKey: "cauBanHang" },
+  { label: "Bán hàng", exp: "Thu tay chờ coupon,", key: "banHang", causeKey: "cauBanHang" },
   { label: "Hủy", exp: "Không hủy hàng", key: "huy", causeKey: "cauHuy" },
   { label: "STO PO", exp: "Không chuyển giao, hủy dòng PO", key: "stoPo", causeKey: "cauStoPo" },
-  { label: "Khác", exp: "Các ghi nhận khác", key: "khac", causeKey: "cauKhac" },
+  { label: "Khác", exp: "Các ghi nhận khác. Để dễ lọc hãy nhập theo cấu trúc [*chủ đề* nội dung] (chủ đề do pic thống nhất). VD [*chuột* nội dung]", key: "khac", causeKey: "cauKhac" },
 ];
 
 const CHAIN_OPTIONS = ["rural", "urban", "winlife"];
