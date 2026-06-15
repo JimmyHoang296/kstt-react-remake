@@ -1,39 +1,73 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
+import { api } from '../api';
 
-const useStore = create((set) => ({
-  data: {
-    user: {},
-    cases: [],
-    violations: [],
-    visitPlan: [],
-    calendar: [],
-    emps: [],
-    setup: {},
-  },
-  isLogin: false,
-  isSidebarOpen: window.innerWidth >= 1024,
-  toasts: [],
+const emptyData = {
+  user: {},
+  cases: [],
+  violations: [],
+  visitPlan: [],
+  calendar: [],
+  emps: [],
+  setup: {},
+};
 
-  setIsLogin: (status) => set({ isLogin: status }),
-  toggleSidebar: () => set((state) => ({ isSidebarOpen: !state.isSidebarOpen })),
+const useStore = create(
+  persist(
+    (set, get) => ({
+      data: emptyData,
+      isLogin: false,
+      isSidebarOpen: window.innerWidth >= 1024,
+      toasts: [],
 
-  setData: (updater) =>
-    set((state) => ({
-      data:
-        typeof updater === 'function'
-          ? updater(state.data)
-          : { ...state.data, ...updater },
-    })),
+      setIsLogin: (status) => set({ isLogin: status }),
+      toggleSidebar: () => set((state) => ({ isSidebarOpen: !state.isSidebarOpen })),
 
-  addToast: (message, type = 'success') =>
-    set((state) => ({
-      toasts: [...state.toasts, { id: Date.now(), message, type }],
-    })),
+      setData: (updater) =>
+        set((state) => ({
+          data:
+            typeof updater === 'function'
+              ? updater(state.data)
+              : { ...state.data, ...updater },
+        })),
 
-  removeToast: (id) =>
-    set((state) => ({
-      toasts: state.toasts.filter((t) => t.id !== id),
-    })),
-}));
+      addToast: (message, type = 'success') =>
+        set((state) => ({
+          toasts: [...state.toasts, { id: Date.now(), message, type }],
+        })),
+
+      removeToast: (id) =>
+        set((state) => ({
+          toasts: state.toasts.filter((t) => t.id !== id),
+        })),
+
+      // Re-fetch all data from server using stored user ID
+      refreshData: async () => {
+        const userId = get().data.user?.id;
+        if (!userId) return false;
+        try {
+          const result = await api.refreshData(userId);
+          if (result.success) {
+            set({ data: result.data });
+            return true;
+          }
+          return false;
+        } catch {
+          return false;
+        }
+      },
+
+      logout: () => set({ isLogin: false, data: emptyData }),
+    }),
+    {
+      name: 'kstt-session',
+      // Only persist login state and user data — not UI state or toasts
+      partialize: (state) => ({
+        isLogin: state.isLogin,
+        data: state.data,
+      }),
+    }
+  )
+);
 
 export default useStore;
