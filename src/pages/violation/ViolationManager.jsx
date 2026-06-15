@@ -1,6 +1,6 @@
 import React, { useEffect } from "react";
 import { Eye, FileText, Plus } from "lucide-react";
-import { downloadFile } from "../../assets/helpers";
+import { downloadBase64 } from "../../assets/helpers";
 import { api } from "../../api";
 import { useManagerPage } from "../../hooks/useManagerPage";
 import useStore from "../../store/useStore";
@@ -62,7 +62,7 @@ const ViolationManager = () => {
     try {
       setLoading(true);
       const r = await api.createRecord(taskId);
-      if (r.success) { downloadFile(r.data); closeModal(); addToast('Tạo biên bản thành công'); }
+      if (r.success) { downloadBase64(r.data, r.filename || 'bienban.docx'); closeModal(); addToast('Tạo biên bản thành công'); }
       else addToast(r.message || 'Tạo biên bản thất bại', 'error');
     } catch (err) { addToast('Lỗi kết nối: ' + (err?.message || 'thử lại sau'), 'error'); }
     finally { setLoading(false); }
