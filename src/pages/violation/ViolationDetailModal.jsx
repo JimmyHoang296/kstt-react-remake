@@ -89,7 +89,7 @@ const ViolationDetailModal = ({ data, task, onClose, onSave, onUpdate, onDelete,
             </select>
           </div>
           <div>
-            <label className="block text-gray-700 text-sm mb-1">Ngày kiểm tra</label>
+            <label className="block text-gray-700 text-sm mb-1">Ngày kiểm tra <span className="text-red-500">*</span></label>
             <input type="date" name="ngayKiemTra" value={formData.ngayKiemTra || ""} onChange={handleInputChange} className="w-full p-2 border rounded-md" />
           </div>
           <div>

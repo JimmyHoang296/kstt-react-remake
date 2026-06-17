@@ -40,6 +40,7 @@ const ViolationManager = () => {
 
   const isValidViolation = (task) => {
     if (!task.sap) { addToast('Bắt buộc nhập mã CH', 'error'); return false; }
+    if (!task.ngayKiemTra) { addToast('Bắt buộc nhập ngày kiểm tra', 'error'); return false; }
     if (!VIOLATION_KEYS.some(k => task[k]?.trim())) {
       addToast('Sự vụ bắt buộc phải có ít nhất một ghi nhận', 'error'); return false;
     }
