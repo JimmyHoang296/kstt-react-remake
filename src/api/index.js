@@ -14,6 +14,7 @@ async function apiFetch(type, data, url = MAIN_URL) {
 
 export const api = {
   login: (credentials) => apiFetch('login', credentials),
+  refreshData: (userId) => apiFetch('refresh', userId),
 
   // Cases (TaskManager)
   createCase: (data) => apiFetch('new', data),
