@@ -17,7 +17,7 @@ const Login = () => {
     if (!username || !password) { setError("Vui lòng nhập đầy đủ thông tin."); return; }
     try {
       setLoading(true);
-      const result = await api.login({ username, password });
+      const result = await api.login({ username: username.toLowerCase(), password });
       if (result.success) {
         setData(result.data);
         setIsLogin(true);
