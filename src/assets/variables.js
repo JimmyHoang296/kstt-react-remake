@@ -1,6 +1,6 @@
 // Supabase — primary data backend (Postgres via PostgREST)
-export const SUPABASE_URL = 'https://ftregaibvbrjylxmjvyk.supabase.co';
-export const SUPABASE_KEY = 'sb_publishable_-clRHw37GaLGLUlr9UvFGQ_fzcWYNke';
+export const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+export const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_KEY;
 
 // Google Apps Script — kept only for features that need Google services:
 //   - createRecord (generates a Word doc from a Google Docs template in Drive)

@@ -1,6 +1,5 @@
 import React, { useEffect } from "react";
 import { Eye, FileText, Plus } from "lucide-react";
-import { downloadBase64 } from "../../assets/helpers";
 import { api } from "../../api";
 import { useManagerPage } from "../../hooks/useManagerPage";
 import useStore from "../../store/useStore";
@@ -10,11 +9,9 @@ import ViolationDetailModal from "./ViolationDetailModal";
 
 const INPUT = "border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent";
 
-const VIOLATION_KEYS = ['vsattp', 'tonKho', 'gianLan', 'kiemKe', 'banHang', 'huy', 'stoPo', 'khac'];
-
-const violationFilterFn = (task, q) =>
-  (!q.sap   || task.sap?.toLowerCase().includes(q.sap.toLowerCase())) &&
-  (!q.store || task.store?.toLowerCase().includes(q.store.toLowerCase()));
+const filterFn = (item, q) =>
+  (!q.sap   || item.sap?.toLowerCase().includes(q.sap.toLowerCase())) &&
+  (!q.store || item.store?.toLowerCase().includes(q.store.toLowerCase()));
 
 const ViolationManager = () => {
   const data     = useStore((state) => state.data);
@@ -22,80 +19,26 @@ const ViolationManager = () => {
   const addToast = useStore((state) => state.addToast);
 
   const {
-    items: violations, setItems: setViolations,
+    items: inspections, setItems: setInspections,
     searchQuery,
     currentPage, setCurrentPage,
-    isModalOpen, selectedItem: selectedTask,
+    isModalOpen, selectedItem: selectedInspection,
     loading, setLoading,
-    paginatedItems: paginatedTasks, totalPages,
+    paginatedItems, totalPages,
     handleSearchChange, resetSearch,
     openModal, closeModal,
   } = useManagerPage({
-    initialItems: data.violations,
+    initialItems: data.inspections || [],
     initialSearch: { sap: '', store: '' },
-    filterFn: violationFilterFn,
+    filterFn,
   });
 
-  useEffect(() => { setData((prev) => ({ ...prev, violations })); }, [violations]);
+  useEffect(() => { setData((prev) => ({ ...prev, inspections })); }, [inspections]);
 
-  const isValidViolation = (task) => {
-    if (!task.sap) { addToast('Bắt buộc nhập mã CH', 'error'); return false; }
-    if (!task.ngayKiemTra) { addToast('Bắt buộc nhập ngày kiểm tra', 'error'); return false; }
-    if (!VIOLATION_KEYS.some(k => task[k]?.trim())) {
-      addToast('Sự vụ bắt buộc phải có ít nhất một ghi nhận', 'error'); return false;
-    }
-    return true;
-  };
-
-  async function handleUpdate(updatedTask) {
-    if (!isValidViolation(updatedTask)) return;
-    try {
-      setLoading(true);
-      const r = await api.updateViolation(updatedTask);
-      if (r.success) { setViolations((p) => p.map((v) => (v.id === updatedTask.id ? updatedTask : v))); closeModal(); addToast('Cập nhật ghi nhận thành công'); }
-      else addToast('Cập nhật thất bại', 'error');
-    } catch { addToast('Lỗi kết nối, thử lại sau', 'error'); }
-    finally { setLoading(false); }
-  }
-
-  async function handleCreateRecord(taskId) {
-    if (!confirm('Bạn muốn tạo biên bản sự vụ này')) return;
-    try {
-      setLoading(true);
-      const r = await api.createRecord(taskId);
-      if (r.success) { downloadBase64(r.data, r.filename || 'bienban.docx'); closeModal(); addToast('Tạo biên bản thành công'); }
-      else addToast(r.message || 'Tạo biên bản thất bại', 'error');
-    } catch (err) { addToast('Lỗi kết nối: ' + (err?.message || 'thử lại sau'), 'error'); }
-    finally { setLoading(false); }
-  }
-
-  async function handleDelete(taskId) {
-    if (!confirm('Bạn muốn xóa ghi nhận này?')) return;
-    try {
-      setLoading(true);
-      const r = await api.deleteViolation(taskId);
-      if (r.success) { setViolations((p) => p.filter((v) => v.id !== taskId)); closeModal(); addToast('Đã xóa ghi nhận'); }
-      else addToast('Xóa thất bại', 'error');
-    } catch { addToast('Lỗi kết nối, thử lại sau', 'error'); }
-    finally { setLoading(false); }
-  }
-
-  async function handleSaveNew(newTask) {
-    newTask.user = data.user.id;
-    newTask.kstt = data.user.name;
-    if (!isValidViolation(newTask)) return;
-    try {
-      setLoading(true);
-      const r = await api.createViolation(newTask);
-      if (r.success) {
-        newTask.id = r.data;
-        setViolations((p) => [...p, newTask]);
-        closeModal();
-        addToast('Thêm ghi nhận thành công');
-      } else addToast('Thêm thất bại', 'error');
-    } catch { addToast('Lỗi kết nối, thử lại sau', 'error'); }
-    finally { setLoading(false); }
-  }
+  // ViolationDetailModal handles its own API calls; these callbacks just update the list
+  const handleCreated = (inspection) => setInspections((p) => [...p, inspection]);
+  const handleUpdated = (inspection) => setInspections((p) => p.map((v) => v.id === inspection.id ? inspection : v));
+  const handleDeleted = (id) => setInspections((p) => p.filter((v) => v.id !== id));
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100">
@@ -130,12 +73,12 @@ const ViolationManager = () => {
       {/* Result count */}
       <div className="px-6 pt-3 pb-1">
         <p className="text-xs text-gray-400">
-          Hiển thị <span className="font-medium text-gray-600">{paginatedTasks.length}</span> / <span className="font-medium text-gray-600">{violations.length}</span> ghi nhận
+          Hiển thị <span className="font-medium text-gray-600">{paginatedItems.length}</span> / <span className="font-medium text-gray-600">{inspections.length}</span> ghi nhận
         </p>
       </div>
 
-      {/* Desktop table */}
-      {paginatedTasks.length === 0 ? (
+      {/* Table */}
+      {paginatedItems.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-gray-400">
           <FileText className="w-10 h-10 mb-3 opacity-40" />
           <p className="text-sm">Không có ghi nhận nào</p>
@@ -146,24 +89,24 @@ const ViolationManager = () => {
             <table className="min-w-full">
               <thead className="bg-gray-50 border-y border-gray-100">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Mã sự vụ</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Mã</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Mã CH</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Tên CH</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">QLKV</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">GĐV</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Ngày KT</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">KSTT</th>
                   <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Chi tiết</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {paginatedTasks.map((task) => (
-                  <tr key={task.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-4 py-3 text-sm text-gray-500 font-mono">{task.id}</td>
-                    <td className="px-4 py-3 text-sm text-gray-700 font-medium">{task.sap}</td>
-                    <td className="px-4 py-3 text-sm text-gray-700">{task.store}</td>
-                    <td className="px-4 py-3 text-sm text-gray-500">{task.qlkv}</td>
-                    <td className="px-4 py-3 text-sm text-gray-500">{task.gdv}</td>
+                {paginatedItems.map((item) => (
+                  <tr key={item.id} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-4 py-3 text-sm text-gray-500 font-mono">{item.id}</td>
+                    <td className="px-4 py-3 text-sm text-gray-700 font-medium">{item.sap}</td>
+                    <td className="px-4 py-3 text-sm text-gray-700">{item.store}</td>
+                    <td className="px-4 py-3 text-sm text-gray-500">{item.ngayKiemTra}</td>
+                    <td className="px-4 py-3 text-sm text-gray-500">{item.kstt}</td>
                     <td className="px-4 py-3 text-center">
-                      <button onClick={() => openModal(task)} className="p-1.5 rounded-lg text-indigo-600 hover:bg-indigo-50 transition-colors">
+                      <button onClick={() => openModal(item)} className="p-1.5 rounded-lg text-indigo-600 hover:bg-indigo-50 transition-colors">
                         <Eye className="w-4 h-4" />
                       </button>
                     </td>
@@ -175,18 +118,18 @@ const ViolationManager = () => {
 
           {/* Mobile cards */}
           <div className="block md:hidden divide-y divide-gray-100">
-            {paginatedTasks.map((task) => (
-              <div key={task.id} className="px-4 py-4 space-y-1.5">
+            {paginatedItems.map((item) => (
+              <div key={item.id} className="px-4 py-4 space-y-1.5">
                 <div className="flex items-start justify-between gap-2">
                   <div>
-                    <p className="text-sm font-medium text-gray-800">{task.sap} — {task.store}</p>
-                    <p className="text-xs text-gray-500 mt-0.5">{task.qlkv} · {task.gdv}</p>
+                    <p className="text-sm font-medium text-gray-800">{item.sap} — {item.store}</p>
+                    <p className="text-xs text-gray-500 mt-0.5">{item.ngayKiemTra} · {item.kstt}</p>
                   </div>
-                  <button onClick={() => openModal(task)} className="shrink-0 p-1.5 rounded-lg text-indigo-600 hover:bg-indigo-50">
+                  <button onClick={() => openModal(item)} className="shrink-0 p-1.5 rounded-lg text-indigo-600 hover:bg-indigo-50">
                     <Eye className="w-4 h-4" />
                   </button>
                 </div>
-                <p className="text-xs text-gray-400 font-mono">{task.id}</p>
+                <p className="text-xs text-gray-400 font-mono">{item.id}</p>
               </div>
             ))}
           </div>
@@ -200,12 +143,11 @@ const ViolationManager = () => {
       {isModalOpen && (
         <ViolationDetailModal
           data={data}
-          task={selectedTask}
+          inspection={selectedInspection}
           onClose={closeModal}
-          onSave={handleSaveNew}
-          onUpdate={handleUpdate}
-          onDelete={handleDelete}
-          onCreateRecord={handleCreateRecord}
+          onCreated={handleCreated}
+          onUpdated={handleUpdated}
+          onDeleted={handleDeleted}
         />
       )}
       {loading && <LoadingModal message="Đang xử lý..." />}

@@ -30,11 +30,13 @@ const typeList = [
 ];
 
 const TaskDetailModal = ({ data, task, onClose, onSave, onUpdate, onDelete }) => {
+  const isEmp = data?.user?.role === 'emp';
   const [formData, setFormData] = useState(task || {
     id: '', email: '', rank: '', status: 'Đang xử lý', type: '', source: '',
     sap: '', store: '', user: data.user.id, name: data.user.name,
     startDate: getTodayDateString(), endDate: '', group: '',
     lossValue: '', returnValue: '', summarize: '', note: '', conclusion: '',
+    pic: isEmp ? data.user.name : '',
   });
   const [errors, setErrors] = useState({});
 
@@ -49,7 +51,7 @@ const TaskDetailModal = ({ data, task, onClose, onSave, onUpdate, onDelete }) =>
   const handleSave = () => {
     const errs = {};
     if (!formData.email) errs.email = 'Bắt buộc nhập tiêu đề email';
-    if (isNew && !formData.pic) errs.pic = 'Bắt buộc chọn nhân sự phụ trách';
+    if (isNew && !isEmp && !formData.pic) errs.pic = 'Bắt buộc chọn nhân sự phụ trách';
     if (Object.keys(errs).length) { setErrors(errs); return; }
     isNew ? onSave(formData) : onUpdate(formData);
   };
@@ -81,10 +83,14 @@ const TaskDetailModal = ({ data, task, onClose, onSave, onUpdate, onDelete }) =>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className={LABEL}>Nhân sự phụ trách {isNew && <span className="text-red-500">*</span>}</label>
-                  <select name="pic" value={formData.pic || ''} onChange={set} className={`${INPUT} ${errors.pic ? 'border-red-400 ring-1 ring-red-400' : ''}`}>
-                    <option value="">— Chọn PIC —</option>
-                    {data.emps.map((emp, i) => <option key={i}>{emp}</option>)}
-                  </select>
+                  {isEmp ? (
+                    <input value={formData.pic || ''} readOnly className={`${INPUT} bg-gray-50 text-gray-500 cursor-not-allowed`} />
+                  ) : (
+                    <select name="pic" value={formData.pic || ''} onChange={set} className={`${INPUT} ${errors.pic ? 'border-red-400 ring-1 ring-red-400' : ''}`}>
+                      <option value="">— Chọn PIC —</option>
+                      {data.emps.map((emp, i) => <option key={i}>{emp}</option>)}
+                    </select>
+                  )}
                   {errors.pic && <p className="mt-1 text-xs text-red-500">{errors.pic}</p>}
                 </div>
                 <div>
