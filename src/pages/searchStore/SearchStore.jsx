@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, MapPin, Phone, Store } from 'lucide-react';
+import { Search, MapPin, Phone, Store, MessageCircle } from 'lucide-react';
 import LoadingModal from '../../components/LoadingModal';
 import { api } from '../../api';
 
@@ -101,11 +101,25 @@ const SearchStore = () => {
                 <div className="space-y-1">
                   <InfoRow label="CHT" value={shop.CHT} />
                   {shop.CHTPhone && (
-                    <div className="flex items-start gap-1.5 text-sm">
-                      <span className="text-gray-400 shrink-0 w-14 text-xs pt-0.5">SĐT</span>
-                      <a href={`tel:${shop.CHTPhone}`} className="text-indigo-600 hover:underline flex items-center gap-1">
-                        <Phone className="w-3 h-3" />{shop.CHTPhone}
-                      </a>
+                    <div className="flex items-start gap-1.5">
+                      <span className="text-gray-400 shrink-0 w-14 text-xs pt-1.5">SĐT</span>
+                      <div className="flex flex-col gap-1">
+                        <span className="text-xs text-gray-600">{shop.CHTPhone}</span>
+                        <div className="flex gap-1.5">
+                          <a
+                            href={`tel:${shop.CHTPhone}`}
+                            className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-green-50 text-green-700 rounded-md hover:bg-green-100 transition-colors"
+                          >
+                            <Phone className="w-3 h-3" /> Gọi
+                          </a>
+                          <a
+                            href={`viber://chat?number=%2B84${String(shop.CHTPhone).replace(/^0/, '')}`}
+                            className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-purple-50 text-purple-700 rounded-md hover:bg-purple-100 transition-colors"
+                          >
+                            <MessageCircle className="w-3 h-3" /> Viber
+                          </a>
+                        </div>
+                      </div>
                     </div>
                   )}
                   <InfoRow label="QLKV" value={shop.QLKV} />

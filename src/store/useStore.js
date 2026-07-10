@@ -5,7 +5,7 @@ import { api } from '../api';
 const emptyData = {
   user: {},
   cases: [],
-  violations: [],
+  inspections: [],
   visitPlan: [],
   calendar: [],
   emps: [],
