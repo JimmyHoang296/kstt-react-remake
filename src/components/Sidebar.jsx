@@ -1,4 +1,5 @@
 import {
+  BarChart2,
   Calendar,
   ChevronLeft,
   ClipboardList,
@@ -32,6 +33,7 @@ const navItemsLeader = [
   { name: "Ghi nhận",      icon: <DownloadCloud size={20} />,   page: "/violation-management" },
   { name: "Lịch BM",       icon: <Store size={20} />,           page: "/visit-plan-management" },
   { name: "TH XLVP",       icon: <ClipboardList size={20} />,   page: "/th-management" },
+  { name: "Báo cáo VP",    icon: <BarChart2 size={20} />,       page: "/violation-report" },
 ];
 
 const navItemsDirector = [

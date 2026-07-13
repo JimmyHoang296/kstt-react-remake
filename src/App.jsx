@@ -8,6 +8,7 @@ import Header from "./components/Header";
 import ViolationManager from "./pages/violation/ViolationManager";
 import VisitPlanManager from "./pages/visitPlan/VisitPlanManager";
 import ThManager from "./pages/thManager/ThManager";
+import ViolationReport from "./pages/violation/ViolationReport";
 import Login from "./pages/login/Login";
 import useStore from "./store/useStore";
 import { Toast } from "./components/Toast";
@@ -37,6 +38,7 @@ const App = () => {
                 <Route path="/violation-management" element={<ViolationManager />} />
                 <Route path="/visit-plan-management" element={<VisitPlanManager />} />
                 <Route path="/th-management" element={<ThManager />} />
+                <Route path="/violation-report" element={<ViolationReport />} />
                 <Route path="*" element={<Navigate to={userRole === "director" ? "/calendar" : "/dashboard"} replace />} />
               </Routes>
             </main>

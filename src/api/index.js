@@ -249,6 +249,20 @@ export const api = {
     return error ? { success: false, message: error.message } : { success: true };
   },
 
+  // ---- Violation Report (inspections + violations joined) ----
+  getInspectionsForReport: async ({ startDate, endDate, role, userName, emps }) => {
+    let q = supabase
+      .from('inspections')
+      .select('*, violations(*)')
+      .gte('ngayKiemTra', startDate)
+      .lte('ngayKiemTra', endDate)
+      .order('ngayKiemTra', { ascending: false });
+    if (role === 'emp') q = q.eq('kstt', userName);
+    else if (role === 'hod') q = q.in('kstt', [...new Set([userName, ...emps])]);
+    const { data, error } = await q;
+    return error ? { success: false, message: error.message } : { success: true, data: data || [] };
+  },
+
   // ---- TH Nhóm 1 & Nhóm Khác ----
   getThNhom1: async ({ role, userName, emps }) => {
     let q = supabase.from('th_nhom_1').select('*').order('week', { ascending: false });
