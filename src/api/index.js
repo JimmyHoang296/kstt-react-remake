@@ -264,15 +264,19 @@ export const api = {
   },
 
   // ---- TH Nhóm 1 & Nhóm Khác ----
-  getThNhom1: async ({ role, userName, emps }) => {
-    let q = supabase.from('th_nhom_1').select('*').order('week', { ascending: false });
+  getThNhom1: async ({ role, userName, emps, startDate, endDate }) => {
+    let q = supabase.from('th_nhom_1').select('*').order('created_at', { ascending: false });
+    if (startDate) q = q.gte('created_at', startDate);
+    if (endDate)   q = q.lte('created_at', endDate + 'T23:59:59');
     if (role === 'emp') q = q.eq('kstt_submitted', userName);
     else if (role === 'hod') q = q.in('kstt_submitted', [...new Set([userName, ...emps])]);
     const { data, error } = await q;
     return error ? { success: false, message: error.message } : { success: true, data: data || [] };
   },
-  getThNhomKhac: async ({ role, userName, emps }) => {
-    let q = supabase.from('th_nhom_khac').select('*').order('week', { ascending: false });
+  getThNhomKhac: async ({ role, userName, emps, startDate, endDate }) => {
+    let q = supabase.from('th_nhom_khac').select('*').order('created_at', { ascending: false });
+    if (startDate) q = q.gte('created_at', startDate);
+    if (endDate)   q = q.lte('created_at', endDate + 'T23:59:59');
     if (role === 'emp') q = q.eq('kstt_submitted', userName);
     else if (role === 'hod') q = q.in('kstt_submitted', [...new Set([userName, ...emps])]);
     const { data, error } = await q;
