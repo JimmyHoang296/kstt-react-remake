@@ -317,6 +317,26 @@ export const api = {
     return { success: errors.length === 0, count: rows.length - errors.length, errors };
   },
 
+  // ---- Admin: app_user ----
+  adminGetUsers: async () => {
+    const { data, error } = await supabase.from('app_user').select('*').order('name');
+    return error ? { success: false, message: error.message } : { success: true, data: data || [] };
+  },
+  adminSaveUser: async (row, isNew) => {
+    let error;
+    if (isNew) {
+      ({ error } = await supabase.from('app_user').insert(row));
+    } else {
+      const { user: userId, ...fields } = row;
+      ({ error } = await supabase.from('app_user').update(fields).eq('user', userId));
+    }
+    return error ? { success: false, message: error.message } : { success: true };
+  },
+  adminDeleteUser: async (userId) => {
+    const { error } = await supabase.from('app_user').delete().eq('user', userId);
+    return error ? { success: false, message: error.message } : { success: true };
+  },
+
   // ---- Admin: nhom_loi ----
   adminGetNhomLoi: async () => {
     const { data, error } = await supabase.from('nhom_loi').select('id,violation,groupName').order('violation').order('id');
