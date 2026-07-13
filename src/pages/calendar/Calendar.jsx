@@ -23,6 +23,7 @@ const PersonalCalendar = ({ weekdays, calendar, setCalendar, userId, userName })
   const [isChanged, setIsChanged] = useState(false);
   const [loading, setLoading] = useState(false);
   const setData = useStore((state) => state.setData);
+  const addToast = useStore((state) => state.addToast);
 
   useEffect(() => {
     const newWeekData = {};
@@ -68,17 +69,31 @@ const PersonalCalendar = ({ weekdays, calendar, setCalendar, userId, userName })
             const idx = updated.findIndex(
               (item) =>
                 new Date(item.date).toDateString() === new Date(dayData.date).toDateString() &&
-                item.user === dayData.user
+                String(item.user).toLowerCase() === String(dayData.user).toLowerCase()
             );
             if (idx !== -1) updated[idx] = { ...updated[idx], ...dayData };
             else updated.push(dayData);
           });
           return updated;
         });
+        setWeekData((prev) => {
+          const next = { ...prev };
+          weekdays.forEach((day, i) => {
+            const dayData = submitArray.find(
+              (d) => new Date(d.date).toDateString() === day.toDateString()
+            );
+            if (dayData) next[i] = { work: dayData.work, storeNumber: dayData.storeNumber, martNumber: dayData.martNumber };
+          });
+          return next;
+        });
         setIsChanged(false);
+        addToast('Cập nhật lịch thành công');
+      } else {
+        addToast(result.message || 'Cập nhật thất bại', 'error');
       }
     } catch (err) {
       console.error(err);
+      addToast('Lỗi kết nối, thử lại sau', 'error');
     } finally {
       setLoading(false);
     }

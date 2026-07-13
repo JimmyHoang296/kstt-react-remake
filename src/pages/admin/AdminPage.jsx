@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Pencil, Plus, Save, Settings, Trash2, Users, X } from 'lucide-react';
+import { Pencil, Plus, Save, Trash2, Users, X } from 'lucide-react';
 import { api } from '../../api';
 import useStore from '../../store/useStore';
 
@@ -571,12 +571,7 @@ const AdminPage = () => {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 px-6 py-4 flex items-center gap-2">
-        <Settings size={18} className="text-indigo-500" />
-        <h2 className="text-base font-bold text-gray-900">Quản trị hệ thống</h2>
-      </div>
-
+    <div>
       <div className="bg-white rounded-xl shadow-sm border border-gray-100">
         <div className="flex border-b border-gray-100 overflow-x-auto">
           {TABS.map((t) => (

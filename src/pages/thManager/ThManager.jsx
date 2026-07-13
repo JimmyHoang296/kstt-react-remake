@@ -209,11 +209,6 @@ const ThManager = () => {
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-      {/* Header */}
-      <div className="px-6 py-4 border-b border-gray-100">
-        <h2 className="text-xl font-bold text-gray-900">Tổng hợp XLVP</h2>
-      </div>
-
       {/* Date range */}
       <div className="px-6 py-3 border-b border-gray-100 bg-gray-50">
         <div className="flex flex-wrap gap-3 items-end">

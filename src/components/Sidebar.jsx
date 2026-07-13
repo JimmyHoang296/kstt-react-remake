@@ -18,24 +18,24 @@ import { Link, useLocation } from "react-router-dom";
 import useStore from "../store/useStore";
 
 const navItemsEmp = [
-  { name: "Dashboard",     icon: <LayoutDashboard size={20} />, page: "/dashboard" },
-  { name: "Sự vụ",         icon: <ListTodo size={20} />,        page: "/task-management" },
-  { name: "Lịch làm việc", icon: <Calendar size={20} />,        page: "/calendar" },
-  { name: "Tìm kiếm",      icon: <Search size={20} />,          page: "/search" },
-  { name: "Ghi nhận",      icon: <DownloadCloud size={20} />,   page: "/violation-management" },
-  { name: "Lịch BM",       icon: <Store size={20} />,           page: "/visit-plan-management" },
-  { name: "TH XLVP",       icon: <ClipboardList size={20} />,   page: "/th-management" },
+  { name: "Dashboard", icon: <LayoutDashboard size={20} />, page: "/dashboard" },
+  { name: "Sự vụ", icon: <ListTodo size={20} />, page: "/task-management" },
+  { name: "Lịch làm việc", icon: <Calendar size={20} />, page: "/calendar" },
+  { name: "Tìm kiếm", icon: <Search size={20} />, page: "/search" },
+  { name: "Ghi nhận", icon: <DownloadCloud size={20} />, page: "/violation-management" },
+  { name: "Lịch BM", icon: <Store size={20} />, page: "/visit-plan-management" },
+  { name: "TH XLVP", icon: <ClipboardList size={20} />, page: "/th-management" },
 ];
 
 const navItemsLeader = [
-  { name: "Dashboard",     icon: <LayoutDashboard size={20} />, page: "/dashboard" },
-  { name: "Sự vụ",         icon: <ListTodo size={20} />,        page: "/task-management" },
-  { name: "Lịch làm việc", icon: <Calendar size={20} />,        page: "/calendar" },
-  { name: "Tìm kiếm",      icon: <Search size={20} />,          page: "/search" },
-  { name: "Ghi nhận",      icon: <DownloadCloud size={20} />,   page: "/violation-management" },
-  { name: "Lịch BM",       icon: <Store size={20} />,           page: "/visit-plan-management" },
-  { name: "TH XLVP",       icon: <ClipboardList size={20} />,   page: "/th-management" },
-  { name: "Báo cáo VP",    icon: <BarChart2 size={20} />,       page: "/violation-report" },
+  { name: "Dashboard", icon: <LayoutDashboard size={20} />, page: "/dashboard" },
+  { name: "Sự vụ", icon: <ListTodo size={20} />, page: "/task-management" },
+  { name: "Lịch làm việc", icon: <Calendar size={20} />, page: "/calendar" },
+  { name: "Tìm kiếm", icon: <Search size={20} />, page: "/search" },
+  { name: "Ghi nhận", icon: <DownloadCloud size={20} />, page: "/violation-management" },
+  { name: "Lịch BM", icon: <Store size={20} />, page: "/visit-plan-management" },
+  { name: "TH XLVP", icon: <ClipboardList size={20} />, page: "/th-management" },
+  { name: "TH ghi nhận", icon: <BarChart2 size={20} />, page: "/violation-report" },
 ];
 
 const navItemsDirector = [
@@ -50,13 +50,13 @@ const Sidebar = () => {
 
   const baseItems =
     user?.role === "director" ? navItemsDirector :
-    user?.role === "emp"      ? navItemsEmp :
-                                navItemsLeader;
+      user?.role === "emp" ? navItemsEmp :
+        navItemsLeader;
 
   const navItems = [
     ...baseItems,
     ...(user?.leadXlvp ? [{ name: "Báo cáo XLVP", icon: <FileCheck size={20} />, page: "/xlvp-report" }] : []),
-    ...(user?.isAdmin  ? [{ name: "Quản trị",     icon: <Settings size={20} />,   page: "/admin" }] : []),
+    ...(user?.isAdmin ? [{ name: "Quản trị", icon: <Settings size={20} />, page: "/admin" }] : []),
   ];
 
   // On mobile, close sidebar after navigating
@@ -86,9 +86,8 @@ const Sidebar = () => {
         {/* Top: logo + collapse button */}
         <div className="flex items-center justify-between h-16 px-4 border-b flex-shrink-0">
           <span
-            className={`text-xl font-bold text-red-800 whitespace-nowrap overflow-hidden transition-all duration-300 ${
-              isSidebarOpen ? "opacity-100 w-auto" : "opacity-0 w-0"
-            }`}
+            className={`text-xl font-bold text-red-800 whitespace-nowrap overflow-hidden transition-all duration-300 ${isSidebarOpen ? "opacity-100 w-auto" : "opacity-0 w-0"
+              }`}
           >
             KSTT WCM
           </span>
@@ -134,9 +133,8 @@ const Sidebar = () => {
                   >
                     <span className="flex-shrink-0">{item.icon}</span>
                     <span
-                      className={`text-sm font-medium whitespace-nowrap overflow-hidden transition-all duration-300 ${
-                        isSidebarOpen ? "opacity-100 max-w-full" : "opacity-0 max-w-0"
-                      }`}
+                      className={`text-sm font-medium whitespace-nowrap overflow-hidden transition-all duration-300 ${isSidebarOpen ? "opacity-100 max-w-full" : "opacity-0 max-w-0"
+                        }`}
                     >
                       {item.name}
                     </span>
@@ -149,15 +147,13 @@ const Sidebar = () => {
 
         {/* Bottom: user info */}
         <div
-          className={`flex items-center gap-3 px-4 py-4 border-t text-gray-500 flex-shrink-0 ${
-            isSidebarOpen ? "" : "justify-center"
-          }`}
+          className={`flex items-center gap-3 px-4 py-4 border-t text-gray-500 flex-shrink-0 ${isSidebarOpen ? "" : "justify-center"
+            }`}
         >
           <User size={18} className="flex-shrink-0" />
           <span
-            className={`text-sm truncate transition-all duration-300 ${
-              isSidebarOpen ? "opacity-100 max-w-full" : "opacity-0 max-w-0"
-            }`}
+            className={`text-sm truncate transition-all duration-300 ${isSidebarOpen ? "opacity-100 max-w-full" : "opacity-0 max-w-0"
+              }`}
           >
             {user?.name}
           </span>

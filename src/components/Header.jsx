@@ -1,6 +1,20 @@
 import { LogOut, Menu, RefreshCw, UserCircle } from 'lucide-react';
 import React, { useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import useStore from '../store/useStore';
+
+const PAGE_TITLES = {
+  '/dashboard':             'Dashboard',
+  '/task-management':       'Sự vụ',
+  '/calendar':              'Lịch làm việc',
+  '/search':                'Tìm kiếm',
+  '/violation-management':  'Ghi nhận vi phạm',
+  '/visit-plan-management': 'Lịch BM',
+  '/th-management':         'TH XLVP',
+  '/violation-report':      'TH ghi nhận',
+  '/xlvp-report':           'Báo cáo XLVP',
+  '/admin':                 'Quản trị',
+};
 
 const Header = () => {
   const userName = useStore((state) => state.data.user?.name);
@@ -8,6 +22,9 @@ const Header = () => {
   const refreshData = useStore((state) => state.refreshData);
   const addToast = useStore((state) => state.addToast);
   const logout = useStore((state) => state.logout);
+  const location = useLocation();
+
+  const pageTitle = Object.entries(PAGE_TITLES).find(([p]) => location.pathname.startsWith(p))?.[1] ?? 'KSTT WCM';
 
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -38,7 +55,9 @@ const Header = () => {
         KSTT WCM
       </span>
 
-      <div className="hidden lg:block" />
+      <span className="hidden lg:block text-base font-semibold text-gray-700">
+        {pageTitle}
+      </span>
 
       {/* Right actions */}
       <div className="flex items-center gap-1">

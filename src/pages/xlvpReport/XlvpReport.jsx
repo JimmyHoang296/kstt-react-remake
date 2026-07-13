@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Calendar, Download, FileCheck, Pencil, Save, Search, Upload, X } from 'lucide-react';
+import { Calendar, Download, Pencil, Save, Search, Upload, X } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { api } from '../../api';
 import useStore from '../../store/useStore';
@@ -558,10 +558,8 @@ const XlvpReport = () => {
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-      {/* Header */}
-      <div className="flex items-center gap-2 px-6 py-4 border-b border-gray-100">
-        <FileCheck size={18} className="text-indigo-500 shrink-0" />
-        <h2 className="text-base font-bold text-gray-900 flex-1">Báo cáo XLVP</h2>
+      {/* Actions */}
+      <div className="flex items-center gap-2 px-6 py-4 border-b border-gray-100 justify-end">
         <button onClick={handleDownload} disabled={loading}
           className="flex items-center gap-1.5 px-3 py-1.5 text-sm border border-gray-200 text-gray-600 rounded-lg hover:bg-gray-50 disabled:opacity-40">
           <Download size={14} /> Tải Excel
