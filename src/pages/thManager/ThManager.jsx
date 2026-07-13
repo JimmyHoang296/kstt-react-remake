@@ -148,6 +148,7 @@ const Empty = () => (
 // ─── Main ─────────────────────────────────────────────────────────────────────
 const ThManager = () => {
   const data = useStore((s) => s.data);
+  const refreshKey = useStore((s) => s.refreshKey);
   const { role, name: userName } = data.user || {};
   const emps = data.emps || [];
   const showKstt = role === 'hod' || role === 'director';
@@ -178,7 +179,7 @@ const ThManager = () => {
     }).finally(() => setLoading(false));
   };
 
-  useEffect(() => { fetchData(); }, []);
+  useEffect(() => { fetchData(); }, [refreshKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const applyRange = (s, e) => { setStart(s); setEnd(e); fetchData(s, e); setPage1(1); setPageK(1); };
   const applyCustom = () => { fetchData(startDate, endDate); setPage1(1); setPageK(1); };

@@ -423,6 +423,7 @@ function NhomKhacTable({ rows, selected, onToggle, onToggleAll, onEdit }) {
 const XlvpReport = () => {
   const { leadXlvp } = useStore((s) => s.data.user) || {};
   const addToast = useStore((s) => s.addToast);
+  const refreshKey = useStore((s) => s.refreshKey);
 
   const [startDate, setStart] = useState(daysAgo(60));
   const [endDate,   setEnd]   = useState(todayStr());
@@ -451,7 +452,7 @@ const XlvpReport = () => {
     setLoading(false);
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [refreshKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const applyRange = (s, e) => { setStart(s); setEnd(e); load(s, e); setPage1(1); setPageK(1); setSelected(new Set()); };
   const applyCustom = () => { load(startDate, endDate); setPage1(1); setPageK(1); setSelected(new Set()); };

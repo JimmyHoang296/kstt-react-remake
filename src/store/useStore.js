@@ -19,6 +19,7 @@ const useStore = create(
       isLogin: false,
       isSidebarOpen: window.innerWidth >= 1024,
       toasts: [],
+      refreshKey: 0,
 
       setIsLogin: (status) => set({ isLogin: status }),
       toggleSidebar: () => set((state) => ({ isSidebarOpen: !state.isSidebarOpen })),
@@ -48,7 +49,7 @@ const useStore = create(
         try {
           const result = await api.refreshData(userId);
           if (result.success) {
-            set({ data: result.data });
+            set((s) => ({ data: result.data, refreshKey: s.refreshKey + 1 }));
             return true;
           }
           return false;
