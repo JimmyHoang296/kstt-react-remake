@@ -10,6 +10,7 @@ import VisitPlanManager from "./pages/visitPlan/VisitPlanManager";
 import ThManager from "./pages/thManager/ThManager";
 import ViolationReport from "./pages/violation/ViolationReport";
 import AdminPage from "./pages/admin/AdminPage";
+import XlvpReport from "./pages/xlvpReport/XlvpReport";
 import Login from "./pages/login/Login";
 import useStore from "./store/useStore";
 import { Toast } from "./components/Toast";
@@ -41,6 +42,7 @@ const App = () => {
                 <Route path="/th-management" element={<ThManager />} />
                 <Route path="/violation-report" element={<ViolationReport />} />
                 <Route path="/admin" element={<AdminPage />} />
+                <Route path="/xlvp-report" element={<XlvpReport />} />
                 <Route path="*" element={<Navigate to={userRole === "director" ? "/calendar" : "/dashboard"} replace />} />
               </Routes>
             </main>

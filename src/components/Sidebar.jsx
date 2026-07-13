@@ -4,6 +4,7 @@ import {
   ChevronLeft,
   ClipboardList,
   DownloadCloud,
+  FileCheck,
   LayoutDashboard,
   ListTodo,
   Menu,
@@ -52,9 +53,11 @@ const Sidebar = () => {
     user?.role === "emp"      ? navItemsEmp :
                                 navItemsLeader;
 
-  const navItems = user?.isAdmin
-    ? [...baseItems, { name: "Quản trị", icon: <Settings size={20} />, page: "/admin" }]
-    : baseItems;
+  const navItems = [
+    ...baseItems,
+    ...(user?.leadXlvp ? [{ name: "Báo cáo XLVP", icon: <FileCheck size={20} />, page: "/xlvp-report" }] : []),
+    ...(user?.isAdmin  ? [{ name: "Quản trị",     icon: <Settings size={20} />,   page: "/admin" }] : []),
+  ];
 
   // On mobile, close sidebar after navigating
   const handleNavClick = () => {

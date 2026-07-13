@@ -116,7 +116,7 @@ async function nextVisitPlanId() {
 // ───────────────────────── bulk load (login / refresh) ───────────────────────
 
 async function getData(u) {
-  const user = { id: u.user, name: u.name, role: u.role, hod: u.hod, director: u.director, isAdmin: u.is_admin || false };
+  const user = { id: u.user, name: u.name, role: u.role, hod: u.hod, director: u.director, isAdmin: u.is_admin || false, leadXlvp: u.lead_xlvp || false };
   const today = bangkokToday();
 
   const makeCases = () => {
@@ -277,6 +277,44 @@ export const api = {
     else if (role === 'hod') q = q.in('kstt_submitted', [...new Set([userName, ...emps])]);
     const { data, error } = await q;
     return error ? { success: false, message: error.message } : { success: true, data: data || [] };
+  },
+
+  // ---- XLVP Report (lead_xlvp) ----
+  getXlvpReport: async ({ startDate, endDate }) => {
+    const { data, error } = await supabase
+      .from('inspections')
+      .select('id,ngayKiemTra,sap,store,kstt,chain,qlkv,gdv,violations(*)')
+      .gte('ngayKiemTra', startDate)
+      .lte('ngayKiemTra', endDate)
+      .order('ngayKiemTra', { ascending: false });
+    if (error) return { success: false, message: error.message };
+    const rows = [];
+    (data || []).forEach((insp) => {
+      (insp.violations || []).forEach((v) => {
+        rows.push({ ...v, ngayKiemTra: insp.ngayKiemTra, sap: insp.sap, store: insp.store, kstt: insp.kstt, chain: insp.chain, qlkv: insp.qlkv, gdv: insp.gdv });
+      });
+    });
+    return { success: true, data: rows };
+  },
+  updateXlvpFields: async (id, fields) => {
+    const allowed = ['trang_thai', 'ma_nv', 'ten_nv', 'chuc_danh', 'gia_tri', 'nhom_loi', 'loi_chi_tiet', 'ket_luan', 'xlvp', 'nd_ket_luan', 'mo_ta', 'nguyen_nhan'];
+    const row = {};
+    for (const k of allowed) {
+      if (k in fields) row[k] = fields[k] === '' ? null : fields[k];
+    }
+    const { error } = await supabase.from('violations').update(row).eq('id', id);
+    return error ? { success: false, message: error.message } : { success: true };
+  },
+  bulkUpdateXlvp: async (rows) => {
+    const errors = [];
+    for (let i = 0; i < rows.length; i += 10) {
+      await Promise.all(rows.slice(i, i + 10).map(async ({ id, ...fields }) => {
+        if (!id) return;
+        const { error } = await supabase.from('violations').update(fields).eq('id', id);
+        if (error) errors.push({ id, message: error.message });
+      }));
+    }
+    return { success: errors.length === 0, count: rows.length - errors.length, errors };
   },
 
   // ---- Admin: nhom_loi ----
