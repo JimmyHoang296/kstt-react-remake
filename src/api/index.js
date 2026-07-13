@@ -249,6 +249,22 @@ export const api = {
     return error ? { success: false, message: error.message } : { success: true };
   },
 
+  // ---- TH Nhóm 1 & Nhóm Khác ----
+  getThNhom1: async ({ role, userName, emps }) => {
+    let q = supabase.from('th_nhom_1').select('*').order('week', { ascending: false });
+    if (role === 'emp') q = q.eq('kstt_submitted', userName);
+    else if (role === 'hod') q = q.in('kstt_submitted', [...new Set([userName, ...emps])]);
+    const { data, error } = await q;
+    return error ? { success: false, message: error.message } : { success: true, data: data || [] };
+  },
+  getThNhomKhac: async ({ role, userName, emps }) => {
+    let q = supabase.from('th_nhom_khac').select('*').order('week', { ascending: false });
+    if (role === 'emp') q = q.eq('kstt_submitted', userName);
+    else if (role === 'hod') q = q.in('kstt_submitted', [...new Set([userName, ...emps])]);
+    const { data, error } = await q;
+    return error ? { success: false, message: error.message } : { success: true, data: data || [] };
+  },
+
   // Word-doc generation still runs on Google Apps Script (Docs template in Drive).
   createRecord: (data) => gasFetch('createRecord', data),
   // Fire-and-forget Telegram notification after creating a new inspection.

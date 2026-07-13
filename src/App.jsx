@@ -7,6 +7,7 @@ import Sidebar from "./components/Sidebar";
 import Header from "./components/Header";
 import ViolationManager from "./pages/violation/ViolationManager";
 import VisitPlanManager from "./pages/visitPlan/VisitPlanManager";
+import ThManager from "./pages/thManager/ThManager";
 import Login from "./pages/login/Login";
 import useStore from "./store/useStore";
 import { Toast } from "./components/Toast";
@@ -35,6 +36,7 @@ const App = () => {
                 <Route path="/search" element={<SearchStore />} />
                 <Route path="/violation-management" element={<ViolationManager />} />
                 <Route path="/visit-plan-management" element={<VisitPlanManager />} />
+                <Route path="/th-management" element={<ThManager />} />
                 <Route path="*" element={<Navigate to={userRole === "director" ? "/calendar" : "/dashboard"} replace />} />
               </Routes>
             </main>

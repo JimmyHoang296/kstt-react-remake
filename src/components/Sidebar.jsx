@@ -1,6 +1,7 @@
 import {
   Calendar,
   ChevronLeft,
+  ClipboardList,
   DownloadCloud,
   LayoutDashboard,
   ListTodo,
@@ -20,6 +21,7 @@ const navItemsEmp = [
   { name: "Tìm kiếm",      icon: <Search size={20} />,          page: "/search" },
   { name: "Ghi nhận",      icon: <DownloadCloud size={20} />,   page: "/violation-management" },
   { name: "Lịch BM",       icon: <Store size={20} />,           page: "/visit-plan-management" },
+  { name: "TH XLVP",       icon: <ClipboardList size={20} />,   page: "/th-management" },
 ];
 
 const navItemsLeader = [
@@ -29,6 +31,7 @@ const navItemsLeader = [
   { name: "Tìm kiếm",      icon: <Search size={20} />,          page: "/search" },
   { name: "Ghi nhận",      icon: <DownloadCloud size={20} />,   page: "/violation-management" },
   { name: "Lịch BM",       icon: <Store size={20} />,           page: "/visit-plan-management" },
+  { name: "TH XLVP",       icon: <ClipboardList size={20} />,   page: "/th-management" },
 ];
 
 const navItemsDirector = [
