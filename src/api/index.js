@@ -116,7 +116,7 @@ async function nextVisitPlanId() {
 // ───────────────────────── bulk load (login / refresh) ───────────────────────
 
 async function getData(u) {
-  const user = { id: u.user, name: u.name, role: u.role, hod: u.hod, director: u.director };
+  const user = { id: u.user, name: u.name, role: u.role, hod: u.hod, director: u.director, isAdmin: u.is_admin || false };
   const today = bangkokToday();
 
   const makeCases = () => {
@@ -277,6 +277,55 @@ export const api = {
     else if (role === 'hod') q = q.in('kstt_submitted', [...new Set([userName, ...emps])]);
     const { data, error } = await q;
     return error ? { success: false, message: error.message } : { success: true, data: data || [] };
+  },
+
+  // ---- Admin: nhom_loi ----
+  adminGetNhomLoi: async () => {
+    const { data, error } = await supabase.from('nhom_loi').select('id,violation,groupName').order('violation').order('id');
+    return error ? { success: false, message: error.message } : { success: true, data: data || [] };
+  },
+  adminSaveNhomLoi: async ({ id, violation, groupName }) => {
+    const { error } = id
+      ? await supabase.from('nhom_loi').update({ violation, groupName }).eq('id', id)
+      : await supabase.from('nhom_loi').insert({ violation, groupName });
+    return error ? { success: false, message: error.message } : { success: true };
+  },
+  adminDeleteNhomLoi: async (id) => {
+    const { error } = await supabase.from('nhom_loi').delete().eq('id', id);
+    return error ? { success: false, message: error.message } : { success: true };
+  },
+
+  // ---- Admin: nhom_ghi_nhan ----
+  adminGetNhomGhiNhan: async () => {
+    const { data, error } = await supabase.from('nhom_ghi_nhan').select('*').order('STT');
+    return error ? { success: false, message: error.message } : { success: true, data: data || [] };
+  },
+  adminSaveNhomGhiNhan: async (row) => {
+    const { error } = row.id
+      ? await supabase.from('nhom_ghi_nhan').update(row).eq('id', row.id)
+      : await supabase.from('nhom_ghi_nhan').insert(row);
+    return error ? { success: false, message: error.message } : { success: true };
+  },
+  adminDeleteNhomGhiNhan: async (id) => {
+    const { error } = await supabase.from('nhom_ghi_nhan').delete().eq('id', id);
+    return error ? { success: false, message: error.message } : { success: true };
+  },
+
+  // ---- Admin: setup ----
+  adminGetSetup: async () => {
+    const { data, error } = await supabase.from('setup').select('*').order('list').order('pos');
+    return error ? { success: false, message: error.message } : { success: true, data: data || [] };
+  },
+  adminSaveSetup: async ({ id, list, value, pos }) => {
+    const row = { list, value, pos: pos !== '' ? Number(pos) : null };
+    const { error } = id
+      ? await supabase.from('setup').update(row).eq('id', id)
+      : await supabase.from('setup').insert(row);
+    return error ? { success: false, message: error.message } : { success: true };
+  },
+  adminDeleteSetup: async (id) => {
+    const { error } = await supabase.from('setup').delete().eq('id', id);
+    return error ? { success: false, message: error.message } : { success: true };
   },
 
   // Word-doc generation still runs on Google Apps Script (Docs template in Drive).

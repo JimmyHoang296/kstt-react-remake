@@ -8,6 +8,7 @@ import {
   ListTodo,
   Menu,
   Search,
+  Settings,
   Store,
   User,
 } from "lucide-react";
@@ -46,10 +47,14 @@ const Sidebar = () => {
   const toggleSidebar = useStore((state) => state.toggleSidebar);
   const location = useLocation();
 
-  const navItems =
+  const baseItems =
     user?.role === "director" ? navItemsDirector :
     user?.role === "emp"      ? navItemsEmp :
                                 navItemsLeader;
+
+  const navItems = user?.isAdmin
+    ? [...baseItems, { name: "Quản trị", icon: <Settings size={20} />, page: "/admin" }]
+    : baseItems;
 
   // On mobile, close sidebar after navigating
   const handleNavClick = () => {
