@@ -1,94 +1,121 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ChevronDown, Download, FileCheck, Pencil, Save, Upload, X } from 'lucide-react';
+import { Download, FileCheck, Pencil, Save, Search, Upload, X } from 'lucide-react';
 import * as XLSX from 'xlsx';
-import { supabase } from '../../api/supabaseClient';
 import { api } from '../../api';
 import useStore from '../../store/useStore';
+import Pagination from '../../components/Pagination';
 
-// ─── Date helpers ─────────────────────────────────────────────────────────────
-const todayStr = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' });
-const thisMonthStart = () => {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
+// ─── Constants ────────────────────────────────────────────────────────────────
+const PAGE_SIZE = 20;
+
+const BADGE = {
+  'Đã trình':   'bg-green-100 text-green-700',
+  'Chờ trình':  'bg-yellow-100 text-yellow-700',
+  'Đang xử lý':'bg-blue-100 text-blue-700',
 };
+const STATUS_OPTS = ['Chờ trình', 'Đang xử lý', 'Đã trình'];
+const INPUT  = 'border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400';
+const FINPUT = 'w-full border border-gray-200 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400';
+const LABEL  = 'block text-xs font-medium text-gray-500 mb-1';
 
-// ─── TRANG_THAI colors ────────────────────────────────────────────────────────
-const TRANG_THAI_COLOR = {
-  'Vi phạm':             'bg-red-100 text-red-700',
-  'Nhắc nhở':            'bg-orange-100 text-orange-700',
-  'Xác minh thêm':       'bg-yellow-100 text-yellow-700',
-  'Ghi nhận thực trạng': 'bg-gray-100 text-gray-600',
-};
-const TRANG_THAI_OPTIONS = ['Vi phạm', 'Nhắc nhở', 'Xác minh thêm', 'Ghi nhận thực trạng'];
-const KET_LUAN_OPTIONS   = ['Xử lý', 'Gộp lỗi', 'Không xử lý'];
+// ─── Shared primitives ────────────────────────────────────────────────────────
+const Th = ({ children, check }) => (
+  <th className={`px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap ${check ? 'w-8' : ''}`}>
+    {children}
+  </th>
+);
+const Td = ({ children, className = '' }) => (
+  <td className={`px-3 py-2.5 text-xs text-gray-700 align-top ${className}`}>{children}</td>
+);
 
-// ─── Excel download ───────────────────────────────────────────────────────────
-const DL_COLS = [
-  ['ID',           (v) => v.id],
-  ['Ngày KT',      (v) => v.ngayKiemTra],
-  ['Mã CH',        (v) => v.sap],
-  ['Tên CH',       (v) => v.store],
-  ['KSTT',         (v) => v.kstt],
-  ['Chuỗi',        (v) => v.chain],
-  ['Nhóm VP',      (v) => v.nhom],
-  ['Hành vi',      (v) => Array.isArray(v.hanh_vi) ? v.hanh_vi.join(', ') : (v.hanh_vi || '')],
-  ['Mô tả',        (v) => v.mo_ta],
-  ['Nguyên nhân',  (v) => v.nguyen_nhan],
-  ['Trạng thái',   (v) => v.trang_thai],
-  ['Mã NV',        (v) => v.ma_nv],
-  ['Tên NV',       (v) => v.ten_nv],
-  ['Chức danh',    (v) => v.chuc_danh],
-  ['Giá trị',      (v) => v.gia_tri],
-  ['Nhóm lỗi',     (v) => v.nhom_loi],
-  ['Lỗi chi tiết', (v) => v.loi_chi_tiet],
-  ['Kết luận',     (v) => v.ket_luan],
-  ['XLVP',         (v) => v.xlvp],
-  ['Nội dung KL',  (v) => v.nd_ket_luan],
-];
-
-function downloadXlsx(rows, start, end) {
-  const data = rows.map((v) => {
-    const r = {};
-    DL_COLS.forEach(([h, fn]) => { r[h] = fn(v) ?? ''; });
-    return r;
-  });
-  const ws = XLSX.utils.json_to_sheet(data);
-  ws['!cols'] = [
-    { wch: 8 }, { wch: 12 }, { wch: 8 }, { wch: 28 }, { wch: 16 }, { wch: 8 },
-    { wch: 16 }, { wch: 30 }, { wch: 30 }, { wch: 30 },
-    { wch: 16 }, { wch: 10 }, { wch: 20 }, { wch: 14 }, { wch: 12 },
-    { wch: 20 }, { wch: 24 }, { wch: 12 }, { wch: 24 }, { wch: 32 },
-  ];
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'XLVP');
-  XLSX.writeFile(wb, `XLVP_${start}_${end}.xlsx`);
+function StatusBadge({ value }) {
+  if (!value) return null;
+  return (
+    <span className={`text-xs px-2 py-0.5 rounded-full whitespace-nowrap ${BADGE[value] || 'bg-gray-100 text-gray-600'}`}>
+      {value}
+    </span>
+  );
 }
 
-// ─── Excel upload parsing ──────────────────────────────────────────────────────
-const UPLOAD_MAP = {
-  'Trạng thái':   'trang_thai',
-  'Mã NV':        'ma_nv',
-  'Tên NV':       'ten_nv',
-  'Chức danh':    'chuc_danh',
-  'Giá trị':      'gia_tri',
-  'Nhóm lỗi':     'nhom_loi',
-  'Lỗi chi tiết': 'loi_chi_tiet',
-  'Kết luận':     'ket_luan',
-  'XLVP':         'xlvp',
-  'Nội dung KL':  'nd_ket_luan',
-  'Mô tả':        'mo_ta',
-  'Nguyên nhân':  'nguyen_nhan',
-};
+// ─── Filter helper ────────────────────────────────────────────────────────────
+function applyFilter(rows, q) {
+  const w = String(q.week || '').trim();
+  const s = String(q.search || '').toLowerCase().trim();
+  const st = q.status || '';
+  return rows.filter((r) => {
+    if (w && String(r.week || '') !== w) return false;
+    if (st) {
+      const statusVal = r.Note ?? r.status ?? '';
+      if (statusVal !== st) return false;
+    }
+    if (s) {
+      const hay = [r.sap, r.store, r.emp_name, r.kstt_submitted].join(' ').toLowerCase();
+      if (!hay.includes(s)) return false;
+    }
+    return true;
+  });
+}
 
-function parseXlsxFile(file) {
+// ─── Excel helpers ─────────────────────────────────────────────────────────────
+const COLS_1 = [
+  ['ID',               (r) => r.id],
+  ['Tuần',             (r) => r.week],
+  ['Mã CH',            (r) => r.sap],
+  ['Tên CH',           (r) => r.store],
+  ['KSTT',             (r) => r.kstt_submitted],
+  ['Nhân viên',        (r) => r.emp_name],
+  ['Chức danh',        (r) => r.emp_title],
+  ['Nội dung vi phạm', (r) => r.violation_text],
+  ['Giá trị',          (r) => r.loss_value],
+  ['Thu hồi',          (r) => r.recover_value],
+  ['Ghi chú',          (r) => r.Note],
+];
+const COLS_K = [
+  ['ID',               (r) => r.id],
+  ['Tuần',             (r) => r.week],
+  ['Mã CH',            (r) => r.sap],
+  ['Tên CH',           (r) => r.store],
+  ['KSTT',             (r) => r.kstt_submitted],
+  ['Nhân viên',        (r) => r.emp_name],
+  ['Chức danh',        (r) => r.emp_title],
+  ['Nội dung vi phạm', (r) => r.violation_text],
+  ['Hình thức XLVP',   (r) => r.disciplinary_action],
+  ['Trạng thái',       (r) => r.status],
+  ['Ghi chú',          (r) => r.NOTE],
+];
+
+function buildXlsx(rows, cols, sheetName, filename) {
+  const data = rows.map((r) => {
+    const obj = {};
+    cols.forEach(([h, fn]) => { obj[h] = fn(r) ?? ''; });
+    return obj;
+  });
+  const ws = XLSX.utils.json_to_sheet(data);
+  ws['!cols'] = cols.map(([h]) => ({ wch: h === 'Nội dung vi phạm' || h === 'Hình thức XLVP' ? 36 : h === 'Tên CH' ? 28 : 16 }));
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, sheetName);
+  XLSX.writeFile(wb, filename);
+}
+
+const UPLOAD_MAP_1 = {
+  'Tuần': 'week', 'Mã CH': 'sap', 'Tên CH': 'store', 'KSTT': 'kstt_submitted',
+  'Nhân viên': 'emp_name', 'Chức danh': 'emp_title', 'Nội dung vi phạm': 'violation_text',
+  'Giá trị': 'loss_value', 'Thu hồi': 'recover_value', 'Ghi chú': 'Note',
+};
+const UPLOAD_MAP_K = {
+  'Tuần': 'week', 'Mã CH': 'sap', 'Tên CH': 'store', 'KSTT': 'kstt_submitted',
+  'Nhân viên': 'emp_name', 'Chức danh': 'emp_title', 'Nội dung vi phạm': 'violation_text',
+  'Hình thức XLVP': 'disciplinary_action', 'Trạng thái': 'status', 'Ghi chú': 'NOTE',
+};
+const NUM_FIELDS_1 = new Set(['loss_value', 'recover_value']);
+
+function parseXlsx(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
         const wb = XLSX.read(e.target.result, { type: 'array' });
-        const ws = wb.Sheets[wb.SheetNames[0]];
-        const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
-        resolve(rows);
+        resolve(XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: '' }));
       } catch (err) { reject(err); }
     };
     reader.onerror = reject;
@@ -96,156 +123,33 @@ function parseXlsxFile(file) {
   });
 }
 
-function buildUpdateRows(xlsxRows) {
-  return xlsxRows
-    .filter((r) => r['ID'])
-    .map((r) => {
-      const upd = { id: r['ID'] };
-      for (const [col, field] of Object.entries(UPLOAD_MAP)) {
-        if (col in r) {
-          const raw = r[col];
-          if (raw === '' || raw === null || raw === undefined) {
-            upd[field] = null;
-          } else if (field === 'gia_tri') {
-            upd[field] = Number(raw) || null;
-          } else {
-            upd[field] = String(raw);
-          }
-        }
-      }
-      return upd;
-    });
+function buildUpdateRows(xlsxRows, map, numFields = new Set()) {
+  return xlsxRows.filter((r) => r['ID']).map((r) => {
+    const upd = { id: r['ID'] };
+    for (const [col, field] of Object.entries(map)) {
+      if (!(col in r)) continue;
+      const raw = r[col];
+      if (raw === '' || raw === null || raw === undefined) { upd[field] = null; }
+      else if (numFields.has(field)) { upd[field] = Number(raw) || null; }
+      else { upd[field] = String(raw); }
+    }
+    return upd;
+  });
 }
 
-// ─── Edit Modal ───────────────────────────────────────────────────────────────
-const INPUT   = 'w-full border border-gray-200 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400';
-const SELECT  = 'w-full border border-gray-200 rounded px-2 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400';
-const LABEL   = 'block text-xs font-medium text-gray-500 mb-1';
-const SECTION = 'text-xs font-semibold text-gray-400 uppercase tracking-wide pb-1 border-b border-gray-100 mb-3 mt-4 first:mt-0';
-
-function XlvpEditModal({ vio, nhomLoi, penalties, onClose, onSave }) {
-  const [form, setForm] = useState({ ...vio });
-  const [saving, setSaving] = useState(false);
-  const addToast = useStore((s) => s.addToast);
-
-  const nhomLoiList   = [...new Set(nhomLoi.map((r) => r.violation).filter(Boolean))];
-  const loiChiTietList = nhomLoi.filter((r) => r.violation === form.nhom_loi).map((r) => r.groupName);
-
-  const set = (field, val) => setForm((p) => ({ ...p, [field]: val }));
-
-  const handleSave = async () => {
-    setSaving(true);
-    const r = await api.updateXlvpFields(form.id, form);
-    setSaving(false);
-    if (r.success) { addToast('Đã lưu'); onSave(form); }
-    else addToast(r.message, 'error');
-  };
-
+// ─── Edit modals ──────────────────────────────────────────────────────────────
+function ModalShell({ title, onClose, onSave, saving, children }) {
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col">
-        {/* Header */}
         <div className="flex items-center justify-between px-5 py-3 border-b shrink-0">
-          <div>
-            <p className="text-sm font-bold text-gray-900">{vio.store} <span className="text-gray-400 font-normal">— {vio.sap}</span></p>
-            <p className="text-xs text-gray-400">{vio.ngayKiemTra} · {vio.kstt} · {vio.nhom}</p>
-          </div>
+          <h3 className="font-semibold text-gray-900 text-sm">{title}</h3>
           <button onClick={onClose} className="p-1 text-gray-400 hover:text-gray-600"><X size={16} /></button>
         </div>
-
-        {/* Body */}
-        <div className="overflow-y-auto flex-1 px-5 py-4">
-          {/* Context (read-only) */}
-          {vio.mo_ta && (
-            <div className="bg-gray-50 rounded-lg px-3 py-2 mb-4 text-xs text-gray-600 space-y-1">
-              <p><span className="font-medium">Mô tả:</span> {vio.mo_ta}</p>
-              {vio.nguyen_nhan && <p><span className="font-medium">Nguyên nhân:</span> {vio.nguyen_nhan}</p>}
-            </div>
-          )}
-
-          {/* Trạng thái + Giá trị */}
-          <p className={SECTION}>Ghi nhận</p>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className={LABEL}>Trạng thái</label>
-              <select className={SELECT} value={form.trang_thai || ''} onChange={(e) => set('trang_thai', e.target.value)}>
-                <option value="">-- Chọn --</option>
-                {TRANG_THAI_OPTIONS.map((t) => <option key={t}>{t}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className={LABEL}>Giá trị (VNĐ)</label>
-              <input type="number" className={INPUT} value={form.gia_tri ?? ''} min={0}
-                onChange={(e) => set('gia_tri', e.target.value === '' ? null : Number(e.target.value))} />
-            </div>
-          </div>
-
-          {/* Nhân viên */}
-          <p className={SECTION}>Nhân viên</p>
-          <div className="grid grid-cols-3 gap-2">
-            <div>
-              <label className={LABEL}>Mã NV</label>
-              <input className={INPUT} value={form.ma_nv || ''} onChange={(e) => set('ma_nv', e.target.value)} />
-            </div>
-            <div>
-              <label className={LABEL}>Tên NV</label>
-              <input className={INPUT} value={form.ten_nv || ''} onChange={(e) => set('ten_nv', e.target.value)} />
-            </div>
-            <div>
-              <label className={LABEL}>Chức danh</label>
-              <input className={INPUT} value={form.chuc_danh || ''} onChange={(e) => set('chuc_danh', e.target.value)} />
-            </div>
-          </div>
-
-          {/* Xử lý */}
-          <p className={SECTION}>Xử lý vi phạm</p>
-          <div className="space-y-3">
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className={LABEL}>Nhóm lỗi</label>
-                <select className={SELECT} value={form.nhom_loi || ''}
-                  onChange={(e) => setForm((p) => ({ ...p, nhom_loi: e.target.value, loi_chi_tiet: '' }))}>
-                  <option value="">-- Chọn --</option>
-                  {nhomLoiList.map((n) => <option key={n} value={n}>{n}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className={LABEL}>Lỗi chi tiết</label>
-                <select className={SELECT} value={form.loi_chi_tiet || ''} disabled={!form.nhom_loi}
-                  onChange={(e) => set('loi_chi_tiet', e.target.value)}>
-                  <option value="">{form.nhom_loi ? '-- Chọn --' : '-- Chọn nhóm lỗi trước --'}</option>
-                  {loiChiTietList.map((g, i) => <option key={i} value={g}>{g}</option>)}
-                </select>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className={LABEL}>Kết luận</label>
-                <select className={SELECT} value={form.ket_luan || ''} onChange={(e) => set('ket_luan', e.target.value)}>
-                  <option value="">-- Chọn --</option>
-                  {KET_LUAN_OPTIONS.map((k) => <option key={k}>{k}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className={LABEL}>Hình thức XLVP</label>
-                <select className={SELECT} value={form.xlvp || ''} onChange={(e) => set('xlvp', e.target.value)}>
-                  <option value="">-- Chọn --</option>
-                  {penalties.map((p) => <option key={p} value={p}>{p}</option>)}
-                </select>
-              </div>
-            </div>
-            <div>
-              <label className={LABEL}>Nội dung kết luận</label>
-              <textarea rows={3} className={INPUT + ' resize-none'} value={form.nd_ket_luan || ''}
-                onChange={(e) => set('nd_ket_luan', e.target.value)} />
-            </div>
-          </div>
-        </div>
-
-        {/* Footer */}
+        <div className="overflow-y-auto flex-1 px-5 py-4 space-y-3">{children}</div>
         <div className="flex justify-end gap-2 px-5 py-3 border-t shrink-0">
           <button onClick={onClose} className="px-3 py-1.5 text-sm border rounded text-gray-600 hover:bg-gray-50">Hủy</button>
-          <button onClick={handleSave} disabled={saving}
+          <button onClick={onSave} disabled={saving}
             className="px-3 py-1.5 text-sm bg-indigo-600 text-white rounded hover:bg-indigo-700 flex items-center gap-1.5 disabled:opacity-60">
             <Save size={13} /> {saving ? 'Đang lưu...' : 'Lưu'}
           </button>
@@ -255,107 +159,336 @@ function XlvpEditModal({ vio, nhomLoi, penalties, onClose, onSave }) {
   );
 }
 
-// ─── Upload result modal ───────────────────────────────────────────────────────
+function CommonFields({ form, set }) {
+  return (
+    <>
+      <div className="grid grid-cols-3 gap-2">
+        <div>
+          <label className={LABEL}>Tuần</label>
+          <input className={FINPUT} value={form.week || ''} onChange={(e) => set('week', e.target.value)} />
+        </div>
+        <div>
+          <label className={LABEL}>Mã CH</label>
+          <input className={FINPUT} value={form.sap || ''} onChange={(e) => set('sap', e.target.value)} />
+        </div>
+        <div>
+          <label className={LABEL}>KSTT</label>
+          <input className={FINPUT} value={form.kstt_submitted || ''} onChange={(e) => set('kstt_submitted', e.target.value)} />
+        </div>
+      </div>
+      <div>
+        <label className={LABEL}>Tên CH</label>
+        <input className={FINPUT} value={form.store || ''} onChange={(e) => set('store', e.target.value)} />
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <label className={LABEL}>Nhân viên</label>
+          <input className={FINPUT} value={form.emp_name || ''} onChange={(e) => set('emp_name', e.target.value)} />
+        </div>
+        <div>
+          <label className={LABEL}>Chức danh</label>
+          <input className={FINPUT} value={form.emp_title || ''} onChange={(e) => set('emp_title', e.target.value)} />
+        </div>
+      </div>
+      <div>
+        <label className={LABEL}>Nội dung vi phạm</label>
+        <textarea rows={3} className={FINPUT + ' resize-none'} value={form.violation_text || ''}
+          onChange={(e) => set('violation_text', e.target.value)} />
+      </div>
+    </>
+  );
+}
+
+function EditNhom1Modal({ row, onClose, onSave }) {
+  const [form, setForm] = useState({ ...row });
+  const [saving, setSaving] = useState(false);
+  const addToast = useStore((s) => s.addToast);
+  const set = (k, v) => setForm((p) => ({ ...p, [k]: v }));
+
+  const save = async () => {
+    setSaving(true);
+    const { id, ...fields } = form;
+    const r = await api.updateThNhom1(id, fields);
+    setSaving(false);
+    if (r.success) { addToast('Đã lưu'); onSave(form); }
+    else addToast(r.message, 'error');
+  };
+
+  return (
+    <ModalShell title="Sửa — Nhóm 1" onClose={onClose} onSave={save} saving={saving}>
+      <CommonFields form={form} set={set} />
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <label className={LABEL}>Giá trị (VNĐ)</label>
+          <input type="number" className={FINPUT} value={form.loss_value ?? ''} min={0}
+            onChange={(e) => set('loss_value', e.target.value === '' ? null : Number(e.target.value))} />
+        </div>
+        <div>
+          <label className={LABEL}>Thu hồi (VNĐ)</label>
+          <input type="number" className={FINPUT} value={form.recover_value ?? ''} min={0}
+            onChange={(e) => set('recover_value', e.target.value === '' ? null : Number(e.target.value))} />
+        </div>
+      </div>
+      <div>
+        <label className={LABEL}>Ghi chú (trạng thái)</label>
+        <select className={FINPUT + ' bg-white'} value={form.Note || ''}
+          onChange={(e) => set('Note', e.target.value)}>
+          <option value="">-- Chọn --</option>
+          {STATUS_OPTS.map((s) => <option key={s}>{s}</option>)}
+        </select>
+      </div>
+    </ModalShell>
+  );
+}
+
+function EditNhomKhacModal({ row, onClose, onSave }) {
+  const [form, setForm] = useState({ ...row });
+  const [saving, setSaving] = useState(false);
+  const addToast = useStore((s) => s.addToast);
+  const set = (k, v) => setForm((p) => ({ ...p, [k]: v }));
+
+  const save = async () => {
+    setSaving(true);
+    const { id, ...fields } = form;
+    const r = await api.updateThNhomKhac(id, fields);
+    setSaving(false);
+    if (r.success) { addToast('Đã lưu'); onSave(form); }
+    else addToast(r.message, 'error');
+  };
+
+  return (
+    <ModalShell title="Sửa — Nhóm Khác" onClose={onClose} onSave={save} saving={saving}>
+      <CommonFields form={form} set={set} />
+      <div>
+        <label className={LABEL}>Hình thức XLVP</label>
+        <textarea rows={2} className={FINPUT + ' resize-none'} value={form.disciplinary_action || ''}
+          onChange={(e) => set('disciplinary_action', e.target.value)} />
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <label className={LABEL}>Trạng thái</label>
+          <select className={FINPUT + ' bg-white'} value={form.status || ''}
+            onChange={(e) => set('status', e.target.value)}>
+            <option value="">-- Chọn --</option>
+            {STATUS_OPTS.map((s) => <option key={s}>{s}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className={LABEL}>Ghi chú</label>
+          <input className={FINPUT} value={form.NOTE || ''} onChange={(e) => set('NOTE', e.target.value)} />
+        </div>
+      </div>
+    </ModalShell>
+  );
+}
+
+// ─── Upload result ─────────────────────────────────────────────────────────────
 function UploadResult({ result, onClose }) {
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-5">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="font-semibold text-gray-900">Kết quả cập nhật</h3>
-          <button onClick={onClose} className="p-1 text-gray-400 hover:text-gray-600"><X size={16} /></button>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="font-semibold text-gray-900 text-sm">Kết quả upload</h3>
+          <button onClick={onClose} className="p-1 text-gray-400 hover:text-gray-600"><X size={15} /></button>
         </div>
-        <div className={`rounded-lg px-4 py-3 text-sm mb-3 ${result.success ? 'bg-green-50 text-green-700' : 'bg-yellow-50 text-yellow-700'}`}>
+        <p className={`text-sm rounded-lg px-3 py-2 mb-2 ${result.success ? 'bg-green-50 text-green-700' : 'bg-yellow-50 text-yellow-700'}`}>
           {result.success
-            ? `Đã cập nhật thành công ${result.count} dòng.`
+            ? `Đã cập nhật ${result.count} dòng thành công.`
             : `Cập nhật ${result.count}/${result.count + result.errors.length} dòng. ${result.errors.length} lỗi.`}
-        </div>
+        </p>
         {result.errors?.length > 0 && (
-          <div className="max-h-40 overflow-y-auto space-y-1">
-            {result.errors.map((e, i) => (
-              <p key={i} className="text-xs text-red-600">ID {e.id}: {e.message}</p>
-            ))}
+          <div className="max-h-32 overflow-y-auto space-y-1">
+            {result.errors.map((e, i) => <p key={i} className="text-xs text-red-600">ID {e.id}: {e.message}</p>)}
           </div>
         )}
-        <div className="flex justify-end mt-4">
-          <button onClick={onClose} className="px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">Đóng</button>
+        <div className="flex justify-end mt-3">
+          <button onClick={onClose} className="px-4 py-1.5 text-sm bg-indigo-600 text-white rounded-lg">Đóng</button>
         </div>
       </div>
     </div>
   );
 }
 
+// ─── Table components ──────────────────────────────────────────────────────────
+function Nhom1Table({ rows, selected, onToggle, onToggleAll, onEdit }) {
+  const allChecked = rows.length > 0 && rows.every((r) => selected.has(r.id));
+  const someChecked = !allChecked && rows.some((r) => selected.has(r.id));
+  return (
+    <div className="overflow-x-auto">
+      <table className="min-w-full text-sm">
+        <thead className="bg-gray-50 border-y border-gray-100">
+          <tr>
+            <Th check>
+              <input type="checkbox" checked={allChecked} ref={(el) => { if (el) el.indeterminate = someChecked; }}
+                onChange={() => onToggleAll(rows)} className="rounded" />
+            </Th>
+            <Th>KSTT</Th><Th>Tuần</Th><Th>Mã CH</Th><Th>Tên CH</Th>
+            <Th>Nhân viên</Th><Th>Chức danh</Th><Th>Nội dung vi phạm</Th>
+            <Th>Giá trị</Th><Th>Thu hồi</Th><Th>Ghi chú</Th>
+            <Th />
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-gray-100">
+          {rows.map((r) => (
+            <tr key={r.id} className={`hover:bg-gray-50 ${selected.has(r.id) ? 'bg-indigo-50/60' : ''}`}>
+              <Td>
+                <input type="checkbox" checked={selected.has(r.id)} onChange={() => onToggle(r.id)} className="rounded" />
+              </Td>
+              <Td>{r.kstt_submitted}</Td>
+              <Td>{r.week}</Td>
+              <Td className="font-medium">{r.sap}</Td>
+              <Td>{r.store}</Td>
+              <Td>{r.emp_name}</Td>
+              <Td>{r.emp_title}</Td>
+              <Td className="max-w-xs"><p className="line-clamp-2">{r.violation_text}</p></Td>
+              <Td className="text-right whitespace-nowrap">{r.loss_value != null ? r.loss_value.toLocaleString() + ' đ' : ''}</Td>
+              <Td className="text-right whitespace-nowrap">{r.recover_value != null ? r.recover_value.toLocaleString() + ' đ' : ''}</Td>
+              <Td><StatusBadge value={r.Note} /></Td>
+              <Td>
+                <button onClick={() => onEdit(r)} className="p-1 text-indigo-500 hover:bg-indigo-50 rounded"><Pencil size={13} /></button>
+              </Td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function NhomKhacTable({ rows, selected, onToggle, onToggleAll, onEdit }) {
+  const allChecked = rows.length > 0 && rows.every((r) => selected.has(r.id));
+  const someChecked = !allChecked && rows.some((r) => selected.has(r.id));
+  return (
+    <div className="overflow-x-auto">
+      <table className="min-w-full text-sm">
+        <thead className="bg-gray-50 border-y border-gray-100">
+          <tr>
+            <Th check>
+              <input type="checkbox" checked={allChecked} ref={(el) => { if (el) el.indeterminate = someChecked; }}
+                onChange={() => onToggleAll(rows)} className="rounded" />
+            </Th>
+            <Th>KSTT</Th><Th>Tuần</Th><Th>Mã CH</Th><Th>Tên CH</Th>
+            <Th>Nhân viên</Th><Th>Chức danh</Th><Th>Nội dung vi phạm</Th>
+            <Th>Hình thức XLVP</Th><Th>Trạng thái</Th><Th>Ghi chú</Th>
+            <Th />
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-gray-100">
+          {rows.map((r) => (
+            <tr key={r.id} className={`hover:bg-gray-50 ${selected.has(r.id) ? 'bg-indigo-50/60' : ''}`}>
+              <Td>
+                <input type="checkbox" checked={selected.has(r.id)} onChange={() => onToggle(r.id)} className="rounded" />
+              </Td>
+              <Td>{r.kstt_submitted}</Td>
+              <Td>{r.week}</Td>
+              <Td className="font-medium">{r.sap}</Td>
+              <Td>{r.store}</Td>
+              <Td>{r.emp_name}</Td>
+              <Td>{r.emp_title}</Td>
+              <Td className="max-w-xs"><p className="line-clamp-2">{r.violation_text}</p></Td>
+              <Td className="max-w-[150px]"><p className="line-clamp-2">{r.disciplinary_action}</p></Td>
+              <Td><StatusBadge value={r.status} /></Td>
+              <Td>{r.NOTE}</Td>
+              <Td>
+                <button onClick={() => onEdit(r)} className="p-1 text-indigo-500 hover:bg-indigo-50 rounded"><Pencil size={13} /></button>
+              </Td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 // ─── Main ─────────────────────────────────────────────────────────────────────
 const XlvpReport = () => {
-  const store    = useStore((s) => s.data);
+  const { leadXlvp } = useStore((s) => s.data.user) || {};
   const addToast = useStore((s) => s.addToast);
-  const { leadXlvp } = store.user || {};
-  const penalties = store.setup?.penalties || [];
 
-  const [startDate, setStart] = useState(thisMonthStart());
-  const [endDate,   setEnd]   = useState(todayStr());
-  const [violations, setViolations] = useState([]);
-  const [loading,    setLoading]    = useState(false);
-  const [search,     setSearch]     = useState('');
-  const [filterTT,   setFilterTT]   = useState('');
-  const [editing,    setEditing]    = useState(null);
-  const [nhomLoi,    setNhomLoi]    = useState([]);
-  const [uploading,  setUploading]  = useState(false);
+  const [rows1,    setRows1]    = useState([]);
+  const [rowsK,    setRowsK]    = useState([]);
+  const [loading,  setLoading]  = useState(false);
+  const [tab,      setTab]      = useState('nhom1');
+  const [q,        setQ]        = useState({ week: '', search: '', status: '' });
+  const [page1,    setPage1]    = useState(1);
+  const [pageK,    setPageK]    = useState(1);
+  const [selected, setSelected] = useState(new Set());
+  const [editing,  setEditing]  = useState(null);
+  const [bulkLoading, setBulkLoading] = useState(false);
   const [uploadResult, setUploadResult] = useState(null);
+  const [uploading, setUploading] = useState(false);
   const fileRef = useRef(null);
 
-  // Load nhomLoi once
-  useEffect(() => {
-    supabase.from('nhom_loi').select('id,violation,groupName').order('violation').order('id')
-      .then(({ data }) => { if (data) setNhomLoi(data); });
-  }, []);
-
-  const fetchData = async (s = startDate, e = endDate) => {
+  const load = async () => {
     setLoading(true);
-    const r = await api.getXlvpReport({ startDate: s, endDate: e });
-    if (r.success) setViolations(r.data);
-    else addToast(r.message, 'error');
+    const [r1, rk] = await Promise.all([api.getAllThNhom1(), api.getAllThNhomKhac()]);
+    if (r1.success) setRows1(r1.data); else addToast(r1.message, 'error');
+    if (rk.success) setRowsK(rk.data); else addToast(rk.message, 'error');
     setLoading(false);
   };
 
-  useEffect(() => { fetchData(); }, []);
+  useEffect(() => { load(); }, []);
 
-  const applyFilter = () => fetchData(startDate, endDate);
+  // Filter
+  const filtered1 = applyFilter(rows1, q);
+  const filteredK = applyFilter(rowsK, q);
+  const total1 = Math.max(1, Math.ceil(filtered1.length / PAGE_SIZE));
+  const totalK = Math.max(1, Math.ceil(filteredK.length / PAGE_SIZE));
+  const p1 = Math.min(page1, total1);
+  const pK = Math.min(pageK, totalK);
+  const paged1 = filtered1.slice((p1 - 1) * PAGE_SIZE, p1 * PAGE_SIZE);
+  const pagedK = filteredK.slice((pK - 1) * PAGE_SIZE, pK * PAGE_SIZE);
 
-  const applyQuick = (months) => {
-    const d = new Date();
-    let s, e;
-    if (months === 0) {
-      s = thisMonthStart(); e = todayStr();
-    } else {
-      const first = new Date(d.getFullYear(), d.getMonth() + months, 1);
-      const last  = new Date(d.getFullYear(), d.getMonth() + months + 1, 0);
-      const fmt = (x) => x.toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' });
-      s = fmt(first); e = fmt(last);
-    }
-    setStart(s); setEnd(e); fetchData(s, e);
+  const handleQ = (e) => {
+    const { name, value } = e.target;
+    setQ((p) => ({ ...p, [name]: value }));
+    setPage1(1); setPageK(1); setSelected(new Set());
+  };
+  const clearQ = () => { setQ({ week: '', search: '', status: '' }); setPage1(1); setPageK(1); setSelected(new Set()); };
+
+  // Selection
+  const toggle = (id) => setSelected((prev) => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; });
+  const toggleAll = (rows) => {
+    const ids = rows.map((r) => r.id);
+    const allIn = ids.every((id) => selected.has(id));
+    setSelected((prev) => {
+      const s = new Set(prev);
+      if (allIn) ids.forEach((id) => s.delete(id));
+      else ids.forEach((id) => s.add(id));
+      return s;
+    });
   };
 
-  // Filtered rows
-  const q = search.toLowerCase();
-  const displayed = violations.filter((v) => {
-    if (filterTT && v.trang_thai !== filterTT) return false;
-    if (!q) return true;
-    return (v.sap || '').toLowerCase().includes(q)
-      || (v.store || '').toLowerCase().includes(q)
-      || (v.kstt || '').toLowerCase().includes(q)
-      || (v.ten_nv || '').toLowerCase().includes(q)
-      || (v.nhom || '').toLowerCase().includes(q);
-  });
+  // Tab switch → clear selection
+  const switchTab = (t) => { setTab(t); setSelected(new Set()); };
 
-  // Stats
-  const totalVP   = violations.filter((v) => v.trang_thai === 'Vi phạm').length;
-  const doneXlvp  = violations.filter((v) => v.ket_luan && v.ket_luan !== '').length;
-  const pendingXlvp = violations.filter((v) => v.trang_thai === 'Vi phạm' && !v.ket_luan).length;
+  // Bulk "Đã trình"
+  const handleBulkTrinh = async () => {
+    if (selected.size === 0) return;
+    setBulkLoading(true);
+    const table = tab === 'nhom1' ? 'th_nhom_1' : 'th_nhom_khac';
+    const r = await api.bulkSetTrinh(table, [...selected]);
+    setBulkLoading(false);
+    if (r.success) {
+      addToast(`Đã chuyển ${selected.size} mục sang Đã trình`);
+      setSelected(new Set());
+      load();
+    } else {
+      addToast(r.message, 'error');
+    }
+  };
 
-  // Save edit
+  // Edit save
   const handleSaved = (updated) => {
-    setViolations((prev) => prev.map((v) => v.id === updated.id ? { ...v, ...updated } : v));
+    if (tab === 'nhom1') setRows1((p) => p.map((r) => r.id === updated.id ? { ...r, ...updated } : r));
+    else setRowsK((p) => p.map((r) => r.id === updated.id ? { ...r, ...updated } : r));
     setEditing(null);
+  };
+
+  // Download
+  const handleDownload = () => {
+    if (tab === 'nhom1') buildXlsx(filtered1, COLS_1, 'Nhóm 1', 'TH_Nhom1.xlsx');
+    else buildXlsx(filteredK, COLS_K, 'Nhóm Khác', 'TH_NhomKhac.xlsx');
   };
 
   // Upload
@@ -365,173 +498,143 @@ const XlvpReport = () => {
     e.target.value = '';
     setUploading(true);
     try {
-      const xlsxRows  = await parseXlsxFile(file);
-      const updateRows = buildUpdateRows(xlsxRows);
-      if (updateRows.length === 0) { addToast('Không tìm thấy cột ID hợp lệ trong file', 'error'); setUploading(false); return; }
-      const result = await api.bulkUpdateXlvp(updateRows);
+      const xlsxRows = await parseXlsx(file);
+      const table = tab === 'nhom1' ? 'th_nhom_1' : 'th_nhom_khac';
+      const map   = tab === 'nhom1' ? UPLOAD_MAP_1 : UPLOAD_MAP_K;
+      const numF  = tab === 'nhom1' ? NUM_FIELDS_1 : new Set();
+      const updateRows = buildUpdateRows(xlsxRows, map, numF);
+      if (updateRows.length === 0) { addToast('Không tìm thấy cột ID hợp lệ', 'error'); setUploading(false); return; }
+      const result = await api.bulkUpdateTh(table, updateRows);
       setUploadResult(result);
-      if (result.count > 0) fetchData();
-    } catch {
-      addToast('Đọc file thất bại', 'error');
-    }
+      if (result.count > 0) load();
+    } catch { addToast('Đọc file thất bại', 'error'); }
     setUploading(false);
   };
 
   if (!leadXlvp) {
-    return (
-      <div className="flex items-center justify-center h-64 text-gray-400 text-sm">
-        Bạn không có quyền truy cập trang này.
-      </div>
-    );
+    return <div className="flex items-center justify-center h-64 text-gray-400 text-sm">Bạn không có quyền truy cập trang này.</div>;
   }
 
-  return (
-    <div className="space-y-4">
-      {/* Filter bar */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 px-5 py-4">
-        <div className="flex flex-wrap items-end gap-3">
-          <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1">Từ ngày</label>
-            <input type="date" value={startDate} onChange={(e) => setStart(e.target.value)}
-              className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1">Đến ngày</label>
-            <input type="date" value={endDate} onChange={(e) => setEnd(e.target.value)}
-              className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" />
-          </div>
-          <button onClick={applyFilter}
-            className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700">
-            Xem
-          </button>
-          <div className="flex gap-2">
-            <button onClick={() => applyQuick(0)} className="px-3 py-2 text-sm border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50">Tháng này</button>
-            <button onClick={() => applyQuick(-1)} className="px-3 py-2 text-sm border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50">Tháng trước</button>
-          </div>
+  const tabs = [
+    { key: 'nhom1', label: 'Nhóm 1',    count: filtered1.length },
+    { key: 'khac',  label: 'Nhóm Khác', count: filteredK.length },
+  ];
 
-          {/* Actions */}
-          <div className="ml-auto flex gap-2">
-            <button
-              onClick={() => downloadXlsx(displayed, startDate, endDate)}
-              disabled={displayed.length === 0}
-              className="flex items-center gap-1.5 px-3 py-2 border border-gray-200 text-sm text-gray-600 rounded-lg hover:bg-gray-50 disabled:opacity-40">
-              <Download size={14} /> Tải Excel
-            </button>
-            <button
-              onClick={() => fileRef.current?.click()}
-              disabled={uploading}
-              className="flex items-center gap-1.5 px-3 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 disabled:opacity-60">
-              <Upload size={14} /> {uploading ? 'Đang upload...' : 'Upload Excel'}
-            </button>
-            <input ref={fileRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={handleUploadFile} />
+  const activeRows = tab === 'nhom1' ? paged1 : pagedK;
+
+  return (
+    <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+      {/* Header */}
+      <div className="flex items-center gap-2 px-6 py-4 border-b border-gray-100">
+        <FileCheck size={18} className="text-indigo-500 shrink-0" />
+        <h2 className="text-base font-bold text-gray-900 flex-1">Báo cáo XLVP</h2>
+        <button onClick={handleDownload} disabled={loading}
+          className="flex items-center gap-1.5 px-3 py-1.5 text-sm border border-gray-200 text-gray-600 rounded-lg hover:bg-gray-50 disabled:opacity-40">
+          <Download size={14} /> Tải Excel
+        </button>
+        <button onClick={() => fileRef.current?.click()} disabled={uploading}
+          className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-60">
+          <Upload size={14} /> {uploading ? 'Đang xử lý...' : 'Upload Excel'}
+        </button>
+        <input ref={fileRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={handleUploadFile} />
+      </div>
+
+      {/* Filters */}
+      <div className="px-6 py-3 border-b border-gray-100 bg-gray-50">
+        <div className="flex flex-wrap gap-3 items-end">
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">Tuần</label>
+            <input name="week" value={q.week} onChange={handleQ} placeholder="VD: 41" className={`${INPUT} w-24`} />
           </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">Trạng thái</label>
+            <select name="status" value={q.status} onChange={handleQ}
+              className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400">
+              <option value="">-- Tất cả --</option>
+              {STATUS_OPTS.map((s) => <option key={s} value={s}>{s}</option>)}
+            </select>
+          </div>
+          <div className="flex-1 min-w-[200px]">
+            <label className="block text-xs font-medium text-gray-500 mb-1">Tìm kiếm</label>
+            <div className="relative">
+              <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+              <input name="search" value={q.search} onChange={handleQ}
+                placeholder="Mã CH, tên CH, nhân viên, KSTT..."
+                className={`${INPUT} pl-8 w-full`} />
+            </div>
+          </div>
+          {(q.week || q.search || q.status) && (
+            <button onClick={clearQ}
+              className="flex items-center gap-1 px-3 py-2 text-sm text-gray-500 border border-gray-200 rounded-lg bg-white hover:bg-gray-50">
+              <X size={13} /> Xoá lọc
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {[
-          { label: 'Tổng vi phạm',   value: violations.length },
-          { label: 'Vi phạm',         value: totalVP,    color: 'text-red-600' },
-          { label: 'Chờ xử lý',       value: pendingXlvp, color: 'text-orange-500' },
-          { label: 'Đã kết luận',     value: doneXlvp,   color: 'text-green-600' },
-        ].map(({ label, value, color }) => (
-          <div key={label} className="bg-white border border-gray-100 rounded-xl px-5 py-4 shadow-sm">
-            <p className="text-xs text-gray-500 mb-1">{label}</p>
-            <p className={`text-2xl font-bold ${color || 'text-gray-900'}`}>{value}</p>
-          </div>
+      {/* Tabs */}
+      <div className="flex border-b border-gray-100 px-6">
+        {tabs.map((t) => (
+          <button key={t.key} onClick={() => switchTab(t.key)}
+            className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+              tab === t.key ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}>
+            {t.label}
+            <span className={`ml-1.5 text-xs px-1.5 py-0.5 rounded-full ${tab === t.key ? 'bg-indigo-100 text-indigo-600' : 'bg-gray-100 text-gray-500'}`}>
+              {t.count}
+            </span>
+          </button>
         ))}
       </div>
 
-      {/* Table */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-        {/* Table header row */}
-        <div className="flex flex-wrap items-center gap-3 px-5 py-3 border-b border-gray-100">
-          <FileCheck size={16} className="text-indigo-500 shrink-0" />
-          <h2 className="text-sm font-bold text-gray-900">Danh sách XLVP</h2>
-          <input value={search} onChange={(e) => setSearch(e.target.value)}
-            placeholder="Tìm mã CH, cửa hàng, KSTT, nhân viên..."
-            className="ml-2 border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 w-56" />
-          <select value={filterTT} onChange={(e) => setFilterTT(e.target.value)}
-            className="border border-gray-200 rounded-lg px-2 py-1.5 text-sm bg-white">
-            <option value="">-- Tất cả trạng thái --</option>
-            {TRANG_THAI_OPTIONS.map((t) => <option key={t} value={t}>{t}</option>)}
-          </select>
-          <span className="ml-auto text-xs text-gray-400">{displayed.length} kết quả</span>
+      {/* Bulk action bar */}
+      {selected.size > 0 && (
+        <div className="flex items-center gap-3 px-6 py-2.5 bg-indigo-50 border-b border-indigo-100">
+          <span className="text-sm text-indigo-700 font-medium">{selected.size} mục đã chọn</span>
+          <button onClick={handleBulkTrinh} disabled={bulkLoading}
+            className="px-3 py-1 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-60">
+            {bulkLoading ? 'Đang xử lý...' : 'Chuyển Đã trình'}
+          </button>
+          <button onClick={() => setSelected(new Set())} className="text-sm text-gray-500 hover:text-gray-700 ml-auto flex items-center gap-1">
+            <X size={13} /> Bỏ chọn
+          </button>
         </div>
+      )}
 
-        {loading ? (
-          <div className="flex items-center justify-center py-20 text-gray-400 text-sm">Đang tải...</div>
-        ) : displayed.length === 0 ? (
-          <div className="flex items-center justify-center py-20 text-gray-400 text-sm">Không có dữ liệu</div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead className="bg-gray-50 border-y border-gray-100">
-                <tr>
-                  <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase whitespace-nowrap">Ngày KT</th>
-                  <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase">Mã CH</th>
-                  <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase">Tên CH</th>
-                  <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase whitespace-nowrap">KSTT</th>
-                  <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase">Nhóm VP</th>
-                  <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase">Trạng thái</th>
-                  <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase whitespace-nowrap">Nhân viên</th>
-                  <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase whitespace-nowrap">Nhóm lỗi</th>
-                  <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase">XLVP</th>
-                  <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase">Kết luận</th>
-                  <th className="w-10" />
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {displayed.map((v) => (
-                  <tr key={v.id} className="hover:bg-gray-50">
-                    <td className="px-3 py-2 text-xs text-gray-500 whitespace-nowrap">{v.ngayKiemTra}</td>
-                    <td className="px-3 py-2 text-xs font-medium text-gray-700 whitespace-nowrap">{v.sap}</td>
-                    <td className="px-3 py-2 text-xs text-gray-700 max-w-[160px] truncate">{v.store}</td>
-                    <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap">{v.kstt}</td>
-                    <td className="px-3 py-2 text-xs text-gray-600 max-w-[120px] truncate">{v.nhom}</td>
-                    <td className="px-3 py-2">
-                      {v.trang_thai && (
-                        <span className={`text-xs px-1.5 py-0.5 rounded-full whitespace-nowrap ${TRANG_THAI_COLOR[v.trang_thai] || 'bg-gray-100 text-gray-600'}`}>
-                          {v.trang_thai}
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap">{[v.ten_nv, v.chuc_danh].filter(Boolean).join(' · ')}</td>
-                    <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap">{v.nhom_loi}</td>
-                    <td className="px-3 py-2 text-xs text-gray-600 max-w-[120px] truncate">{v.xlvp}</td>
-                    <td className="px-3 py-2">
-                      {v.ket_luan && (
-                        <span className="text-xs bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded whitespace-nowrap">{v.ket_luan}</span>
-                      )}
-                    </td>
-                    <td className="px-3 py-2">
-                      <button onClick={() => setEditing(v)}
-                        className="p-1 text-indigo-500 hover:bg-indigo-50 rounded">
-                        <Pencil size={13} />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+      {/* Content */}
+      {loading ? (
+        <div className="flex items-center justify-center py-20 text-gray-400 text-sm">Đang tải...</div>
+      ) : (
+        <div className="pb-4">
+          <div className="px-6 pt-3 pb-1">
+            <p className="text-xs text-gray-400">
+              Hiển thị <span className="font-medium text-gray-600">{activeRows.length}</span> /&nbsp;
+              <span className="font-medium text-gray-600">{tab === 'nhom1' ? filtered1.length : filteredK.length}</span> bản ghi
+            </p>
           </div>
-        )}
-      </div>
 
-      {editing && (
-        <XlvpEditModal
-          vio={editing}
-          nhomLoi={nhomLoi}
-          penalties={penalties}
-          onClose={() => setEditing(null)}
-          onSave={handleSaved}
-        />
+          {tab === 'nhom1' ? (
+            paged1.length === 0
+              ? <div className="flex items-center justify-center py-16 text-gray-400 text-sm">Không có dữ liệu</div>
+              : <Nhom1Table rows={paged1} selected={selected} onToggle={toggle} onToggleAll={toggleAll} onEdit={setEditing} />
+          ) : (
+            pagedK.length === 0
+              ? <div className="flex items-center justify-center py-16 text-gray-400 text-sm">Không có dữ liệu</div>
+              : <NhomKhacTable rows={pagedK} selected={selected} onToggle={toggle} onToggleAll={toggleAll} onEdit={setEditing} />
+          )}
+
+          <div className="px-6 pt-3">
+            {tab === 'nhom1'
+              ? <Pagination totalPages={total1} currentPage={p1} setCurrentPage={setPage1} />
+              : <Pagination totalPages={totalK} currentPage={pK} setCurrentPage={setPageK} />}
+          </div>
+        </div>
       )}
 
-      {uploadResult && (
-        <UploadResult result={uploadResult} onClose={() => setUploadResult(null)} />
-      )}
+      {/* Modals */}
+      {editing && tab === 'nhom1' && <EditNhom1Modal row={editing} onClose={() => setEditing(null)} onSave={handleSaved} />}
+      {editing && tab === 'khac'  && <EditNhomKhacModal row={editing} onClose={() => setEditing(null)} onSave={handleSaved} />}
+      {uploadResult && <UploadResult result={uploadResult} onClose={() => setUploadResult(null)} />}
     </div>
   );
 };

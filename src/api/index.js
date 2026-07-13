@@ -279,38 +279,34 @@ export const api = {
     return error ? { success: false, message: error.message } : { success: true, data: data || [] };
   },
 
-  // ---- XLVP Report (lead_xlvp) ----
-  getXlvpReport: async ({ startDate, endDate }) => {
-    const { data, error } = await supabase
-      .from('inspections')
-      .select('id,ngayKiemTra,sap,store,kstt,chain,qlkv,gdv,violations(*)')
-      .gte('ngayKiemTra', startDate)
-      .lte('ngayKiemTra', endDate)
-      .order('ngayKiemTra', { ascending: false });
-    if (error) return { success: false, message: error.message };
-    const rows = [];
-    (data || []).forEach((insp) => {
-      (insp.violations || []).forEach((v) => {
-        rows.push({ ...v, ngayKiemTra: insp.ngayKiemTra, sap: insp.sap, store: insp.store, kstt: insp.kstt, chain: insp.chain, qlkv: insp.qlkv, gdv: insp.gdv });
-      });
-    });
-    return { success: true, data: rows };
+  // ---- XLVP Lead: th_nhom_1 & th_nhom_khac (all rows, no role filter) ----
+  getAllThNhom1: async () => {
+    const { data, error } = await supabase.from('th_nhom_1').select('*').order('week', { ascending: false });
+    return error ? { success: false, message: error.message } : { success: true, data: data || [] };
   },
-  updateXlvpFields: async (id, fields) => {
-    const allowed = ['trang_thai', 'ma_nv', 'ten_nv', 'chuc_danh', 'gia_tri', 'nhom_loi', 'loi_chi_tiet', 'ket_luan', 'xlvp', 'nd_ket_luan', 'mo_ta', 'nguyen_nhan'];
-    const row = {};
-    for (const k of allowed) {
-      if (k in fields) row[k] = fields[k] === '' ? null : fields[k];
-    }
-    const { error } = await supabase.from('violations').update(row).eq('id', id);
+  getAllThNhomKhac: async () => {
+    const { data, error } = await supabase.from('th_nhom_khac').select('*').order('week', { ascending: false });
+    return error ? { success: false, message: error.message } : { success: true, data: data || [] };
+  },
+  updateThNhom1: async (id, fields) => {
+    const { error } = await supabase.from('th_nhom_1').update(fields).eq('id', id);
     return error ? { success: false, message: error.message } : { success: true };
   },
-  bulkUpdateXlvp: async (rows) => {
+  updateThNhomKhac: async (id, fields) => {
+    const { error } = await supabase.from('th_nhom_khac').update(fields).eq('id', id);
+    return error ? { success: false, message: error.message } : { success: true };
+  },
+  bulkSetTrinh: async (table, ids) => {
+    const field = table === 'th_nhom_1' ? 'Note' : 'status';
+    const { error } = await supabase.from(table).update({ [field]: 'Đã trình' }).in('id', ids);
+    return error ? { success: false, message: error.message } : { success: true };
+  },
+  bulkUpdateTh: async (table, rows) => {
     const errors = [];
     for (let i = 0; i < rows.length; i += 10) {
       await Promise.all(rows.slice(i, i + 10).map(async ({ id, ...fields }) => {
         if (!id) return;
-        const { error } = await supabase.from('violations').update(fields).eq('id', id);
+        const { error } = await supabase.from(table).update(fields).eq('id', id);
         if (error) errors.push({ id, message: error.message });
       }));
     }
