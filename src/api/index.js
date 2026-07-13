@@ -284,12 +284,18 @@ export const api = {
   },
 
   // ---- XLVP Lead: th_nhom_1 & th_nhom_khac (all rows, no role filter) ----
-  getAllThNhom1: async () => {
-    const { data, error } = await supabase.from('th_nhom_1').select('*').order('week', { ascending: false });
+  getAllThNhom1: async ({ startDate, endDate } = {}) => {
+    let q = supabase.from('th_nhom_1').select('*').order('finished_date', { ascending: false });
+    if (startDate) q = q.gte('finished_date', startDate);
+    if (endDate)   q = q.lte('finished_date', endDate);
+    const { data, error } = await q;
     return error ? { success: false, message: error.message } : { success: true, data: data || [] };
   },
-  getAllThNhomKhac: async () => {
-    const { data, error } = await supabase.from('th_nhom_khac').select('*').order('week', { ascending: false });
+  getAllThNhomKhac: async ({ startDate, endDate } = {}) => {
+    let q = supabase.from('th_nhom_khac').select('*').order('approved_date', { ascending: false });
+    if (startDate) q = q.gte('approved_date', startDate);
+    if (endDate)   q = q.lte('approved_date', endDate);
+    const { data, error } = await q;
     return error ? { success: false, message: error.message } : { success: true, data: data || [] };
   },
   updateThNhom1: async (id, fields) => {

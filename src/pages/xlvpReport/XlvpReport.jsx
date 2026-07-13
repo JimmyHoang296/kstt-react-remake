@@ -1,9 +1,28 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Download, FileCheck, Pencil, Save, Search, Upload, X } from 'lucide-react';
+import { Calendar, Download, FileCheck, Pencil, Save, Search, Upload, X } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { api } from '../../api';
 import useStore from '../../store/useStore';
 import Pagination from '../../components/Pagination';
+
+// ─── Date helpers ─────────────────────────────────────────────────────────────
+const todayStr = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' });
+const daysAgo  = (n) => {
+  const d = new Date();
+  d.setDate(d.getDate() - n);
+  return d.toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' });
+};
+const thisMonthStart = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
+};
+const prevMonthRange = () => {
+  const d = new Date();
+  const first = new Date(d.getFullYear(), d.getMonth() - 1, 1);
+  const last  = new Date(d.getFullYear(), d.getMonth(), 0);
+  const fmt = (x) => x.toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' });
+  return { start: fmt(first), end: fmt(last) };
+};
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const PAGE_SIZE = 20;
@@ -405,6 +424,8 @@ const XlvpReport = () => {
   const { leadXlvp } = useStore((s) => s.data.user) || {};
   const addToast = useStore((s) => s.addToast);
 
+  const [startDate, setStart] = useState(daysAgo(60));
+  const [endDate,   setEnd]   = useState(todayStr());
   const [rows1,    setRows1]    = useState([]);
   const [rowsK,    setRowsK]    = useState([]);
   const [loading,  setLoading]  = useState(false);
@@ -419,15 +440,28 @@ const XlvpReport = () => {
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef(null);
 
-  const load = async () => {
+  const load = async (s = startDate, e = endDate) => {
     setLoading(true);
-    const [r1, rk] = await Promise.all([api.getAllThNhom1(), api.getAllThNhomKhac()]);
+    const [r1, rk] = await Promise.all([
+      api.getAllThNhom1({ startDate: s, endDate: e }),
+      api.getAllThNhomKhac({ startDate: s, endDate: e }),
+    ]);
     if (r1.success) setRows1(r1.data); else addToast(r1.message, 'error');
     if (rk.success) setRowsK(rk.data); else addToast(rk.message, 'error');
     setLoading(false);
   };
 
   useEffect(() => { load(); }, []);
+
+  const applyRange = (s, e) => { setStart(s); setEnd(e); load(s, e); setPage1(1); setPageK(1); setSelected(new Set()); };
+  const applyCustom = () => { load(startDate, endDate); setPage1(1); setPageK(1); setSelected(new Set()); };
+
+  const QUICK_BTNS = [
+    { label: '30 ngày',     fn: () => applyRange(daysAgo(30), todayStr()) },
+    { label: '60 ngày',     fn: () => applyRange(daysAgo(60), todayStr()) },
+    { label: 'Tháng này',   fn: () => applyRange(thisMonthStart(), todayStr()) },
+    { label: 'Tháng trước', fn: () => { const pm = prevMonthRange(); applyRange(pm.start, pm.end); } },
+  ];
 
   // Filter
   const filtered1 = applyFilter(rows1, q);
@@ -472,7 +506,7 @@ const XlvpReport = () => {
     if (r.success) {
       addToast(`Đã chuyển ${selected.size} mục sang Đã trình`);
       setSelected(new Set());
-      load();
+      load(startDate, endDate);
     } else {
       addToast(r.message, 'error');
     }
@@ -506,7 +540,7 @@ const XlvpReport = () => {
       if (updateRows.length === 0) { addToast('Không tìm thấy cột ID hợp lệ', 'error'); setUploading(false); return; }
       const result = await api.bulkUpdateTh(table, updateRows);
       setUploadResult(result);
-      if (result.count > 0) load();
+      if (result.count > 0) load(startDate, endDate);
     } catch { addToast('Đọc file thất bại', 'error'); }
     setUploading(false);
   };
@@ -537,6 +571,35 @@ const XlvpReport = () => {
           <Upload size={14} /> {uploading ? 'Đang xử lý...' : 'Upload Excel'}
         </button>
         <input ref={fileRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={handleUploadFile} />
+      </div>
+
+      {/* Date range */}
+      <div className="px-6 py-3 border-b border-gray-100 bg-gray-50">
+        <div className="flex flex-wrap gap-3 items-end">
+          <Calendar size={14} className="text-gray-400 self-center" />
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">Từ ngày</label>
+            <input type="date" value={startDate} onChange={(e) => setStart(e.target.value)}
+              className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">Đến ngày</label>
+            <input type="date" value={endDate} onChange={(e) => setEnd(e.target.value)}
+              className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+          </div>
+          <button onClick={applyCustom}
+            className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700">
+            Xem
+          </button>
+          <div className="flex gap-2 flex-wrap">
+            {QUICK_BTNS.map(({ label, fn }) => (
+              <button key={label} onClick={fn}
+                className="px-3 py-2 text-sm border border-gray-200 rounded-lg text-gray-600 hover:bg-white bg-white">
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
       {/* Filters */}
