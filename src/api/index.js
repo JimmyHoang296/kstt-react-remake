@@ -116,7 +116,7 @@ async function nextVisitPlanId() {
 // ───────────────────────── bulk load (login / refresh) ───────────────────────
 
 async function getData(u) {
-  const user = { id: u.user, name: u.name, role: u.role, hod: u.hod, director: u.director, isAdmin: u.is_admin || false, leadXlvp: u.lead_xlvp || false };
+  const user = { id: u.user, name: u.name, role: u.role, hod: u.hod, director: u.director, isAdmin: u.is_admin || false, leadXlvp: u.lead_xlvp || false, leadGhiNhan: u.lead_ghi_nhan || false };
   const today = bangkokToday();
 
   const makeCases = () => {

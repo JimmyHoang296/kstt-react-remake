@@ -65,7 +65,7 @@ function ActionCell({ onEdit, onDelete }) {
 
 const ROLE_OPTS = ['emp', 'hod', 'director'];
 
-const EMPTY_USER = { user: '', name: '', password: '', role: 'emp', hod: '', director: '', is_admin: false, lead_xlvp: false };
+const EMPTY_USER = { user: '', name: '', password: '', role: 'emp', hod: '', director: '', is_admin: false, lead_xlvp: false, lead_ghi_nhan: false };
 
 function AppUserEditor() {
   const [rows,    setRows]    = useState([]);
@@ -134,14 +134,15 @@ function AppUserEditor() {
               <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase">HOD</th>
               <th className="px-3 py-2.5 text-center text-xs font-semibold text-gray-500 uppercase">Admin</th>
               <th className="px-3 py-2.5 text-center text-xs font-semibold text-gray-500 uppercase">Lead XLVP</th>
+              <th className="px-3 py-2.5 text-center text-xs font-semibold text-gray-500 uppercase">Lead GN</th>
               <th className="w-20" />
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
             {loading ? (
-              <tr><td colSpan={7} className="text-center py-10 text-gray-400 text-sm">Đang tải...</td></tr>
+              <tr><td colSpan={8} className="text-center py-10 text-gray-400 text-sm">Đang tải...</td></tr>
             ) : rows.length === 0 ? (
-              <tr><td colSpan={7} className="text-center py-10 text-gray-400 text-sm">Chưa có dữ liệu</td></tr>
+              <tr><td colSpan={8} className="text-center py-10 text-gray-400 text-sm">Chưa có dữ liệu</td></tr>
             ) : rows.map((row) => (
               <tr key={row.user} className="hover:bg-gray-50">
                 <td className="px-3 py-2 text-gray-800 font-medium">{row.name}</td>
@@ -155,6 +156,9 @@ function AppUserEditor() {
                 </td>
                 <td className="px-3 py-2 text-center">
                   {row.lead_xlvp && <span className="text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded">✓</span>}
+                </td>
+                <td className="px-3 py-2 text-center">
+                  {row.lead_ghi_nhan && <span className="text-xs bg-teal-100 text-teal-700 px-1.5 py-0.5 rounded">✓</span>}
                 </td>
                 <td className="px-3 py-2">
                   <div className="flex gap-2 justify-end">
@@ -239,6 +243,12 @@ function AppUserEditor() {
                     onChange={(e) => setField('lead_xlvp', e.target.checked)}
                     className="rounded text-indigo-600" />
                   Lead XLVP
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer select-none text-sm text-gray-700">
+                  <input type="checkbox" checked={!!editing.row.lead_ghi_nhan}
+                    onChange={(e) => setField('lead_ghi_nhan', e.target.checked)}
+                    className="rounded text-indigo-600" />
+                  Lead Ghi nhận
                 </label>
               </div>
             </div>
