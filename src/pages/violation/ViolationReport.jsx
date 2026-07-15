@@ -67,17 +67,64 @@ function buildXlsxRows(inspections) {
   return rows;
 }
 
+function buildSheet2Aoa(inspections) {
+  const allNhom = [
+    ...new Set(
+      inspections.flatMap((i) => (i.violations || []).map((v) => v.nhom).filter(Boolean))
+    ),
+  ].sort();
+
+  const BASE = ['Ngày KT', 'Mã CH', 'Tên CH', 'Chuỗi', 'QLKV', 'GĐV', 'KSTT', 'Thu tin', 'Số GN'];
+  const header = [...BASE, ...allNhom];
+
+  const dataRows = inspections.map((insp) => {
+    const byNhom = {};
+    (insp.violations || []).forEach((v) => {
+      if (!v.nhom) return;
+      if (!byNhom[v.nhom]) byNhom[v.nhom] = [];
+      const hv = Array.isArray(v.hanh_vi) ? v.hanh_vi.join(', ') : (v.hanh_vi || '');
+      byNhom[v.nhom].push(hv || v.mo_ta || '✓');
+    });
+    return [
+      insp.ngayKiemTra,
+      insp.sap,
+      insp.store,
+      insp.chain,
+      insp.qlkv,
+      insp.gdv,
+      insp.kstt,
+      insp.batCapVH,
+      (insp.violations || []).length,
+      ...allNhom.map((n) => (byNhom[n] ? byNhom[n].join(' | ') : '')),
+    ];
+  });
+
+  return { aoa: [header, ...dataRows], nhomCount: allNhom.length };
+}
+
 function downloadXlsx(inspections, start, end) {
-  const rows = buildXlsxRows(inspections);
-  const ws = XLSX.utils.json_to_sheet(rows);
-  // column widths
-  ws['!cols'] = [
+  const wb = XLSX.utils.book_new();
+
+  // Sheet 1 — Chi tiết
+  const detail = buildXlsxRows(inspections);
+  const ws1 = XLSX.utils.json_to_sheet(detail);
+  ws1['!cols'] = [
     { wch: 12 }, { wch: 8 }, { wch: 28 }, { wch: 8 }, { wch: 14 }, { wch: 14 }, { wch: 16 }, { wch: 20 },
     { wch: 16 }, { wch: 30 }, { wch: 30 }, { wch: 30 }, { wch: 14 }, { wch: 12 },
     { wch: 10 }, { wch: 20 }, { wch: 14 }, { wch: 12 }, { wch: 20 }, { wch: 24 }, { wch: 24 }, { wch: 30 },
   ];
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Ghi nhận VP');
+  XLSX.utils.book_append_sheet(wb, ws1, 'Chi tiết');
+
+  // Sheet 2 — Theo site
+  const { aoa, nhomCount } = buildSheet2Aoa(inspections);
+  const ws2 = XLSX.utils.aoa_to_sheet(aoa);
+  const baseCols = [12, 8, 28, 8, 14, 14, 16, 20, 8];
+  ws2['!cols'] = [
+    ...baseCols.map((w) => ({ wch: w })),
+    ...Array(nhomCount).fill({ wch: 35 }),
+  ];
+  XLSX.utils.book_append_sheet(wb, ws2, 'Theo site');
+
   XLSX.writeFile(wb, `GhiNhanVP_${start}_${end}.xlsx`);
 }
 
