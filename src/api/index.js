@@ -128,7 +128,11 @@ async function getData(u) {
 
   const [cases, inspections, calendar, visitPlan, empRes, setupRes, nhomRes] = await Promise.all([
     fetchAllRows(makeCases),
-    fetchAllRows(() => supabase.from('inspections').select('*').ilike('user', user.id)),
+    fetchAllRows(() => {
+      let q = supabase.from('inspections').select('*');
+      if (!user.leadGhiNhan) q = q.ilike('user', user.id);
+      return q;
+    }),
     fetchAllRows(() => supabase.from('calendar').select('*').ilike('user', user.id)),
     fetchAllRows(() => supabase.from('visit_plan').select('*').ilike('user', user.id).gte('date', today)),
     supabase.from('app_user').select('name').eq('hod', user.hod),
@@ -250,15 +254,17 @@ export const api = {
   },
 
   // ---- Violation Report (inspections + violations joined) ----
-  getInspectionsForReport: async ({ startDate, endDate, role, userName, emps }) => {
+  getInspectionsForReport: async ({ startDate, endDate, role, userName, emps, leadGhiNhan }) => {
     let q = supabase
       .from('inspections')
       .select('*, violations(*)')
       .gte('ngayKiemTra', startDate)
       .lte('ngayKiemTra', endDate)
       .order('ngayKiemTra', { ascending: false });
-    if (role === 'emp') q = q.eq('kstt', userName);
-    else if (role === 'hod') q = q.in('kstt', [...new Set([userName, ...emps])]);
+    if (!leadGhiNhan) {
+      if (role === 'emp') q = q.eq('kstt', userName);
+      else if (role === 'hod') q = q.in('kstt', [...new Set([userName, ...emps])]);
+    }
     const { data, error } = await q;
     return error ? { success: false, message: error.message } : { success: true, data: data || [] };
   },

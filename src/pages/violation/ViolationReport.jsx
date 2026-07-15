@@ -189,9 +189,9 @@ function InspectionRow({ insp, showKstt }) {
 // ─── Main ─────────────────────────────────────────────────────────────────────
 const ViolationReport = () => {
   const store = useStore((s) => s.data);
-  const { role, name: userName } = store.user || {};
+  const { role, name: userName, leadGhiNhan } = store.user || {};
   const emps = store.emps || [];
-  const showKstt = role === 'hod' || role === 'director';
+  const showKstt = role === 'hod' || role === 'director' || leadGhiNhan;
 
   const init = thisMonth();
   const [startDate, setStartDate] = useState(init.start);
@@ -202,7 +202,7 @@ const ViolationReport = () => {
 
   const fetch = async (s, e) => {
     setLoading(true); setError('');
-    const r = await api.getInspectionsForReport({ startDate: s, endDate: e, role, userName, emps });
+    const r = await api.getInspectionsForReport({ startDate: s, endDate: e, role, userName, emps, leadGhiNhan });
     if (r.success) setInspections(r.data);
     else setError(r.message);
     setLoading(false);
