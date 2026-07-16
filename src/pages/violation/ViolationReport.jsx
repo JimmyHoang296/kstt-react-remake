@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { BarChart2, ChevronDown, ChevronRight, Download, FileText } from 'lucide-react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { BarChart2, ChevronDown, ChevronRight, Download, FileText, Search, X } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { api } from '../../api';
 import useStore from '../../store/useStore';
@@ -67,39 +67,75 @@ function buildXlsxRows(inspections) {
   return rows;
 }
 
-function buildSheet2Aoa(inspections) {
-  const allNhom = [
-    ...new Set(
-      inspections.flatMap((i) => (i.violations || []).map((v) => v.nhom).filter(Boolean))
-    ),
-  ].sort();
+const S2_BASE = ['Ngày KT', 'Mã CH', 'Tên CH', 'Chuỗi', 'QLKV', 'GĐV', 'KSTT', 'Thu tin', 'Số GN'];
+const S2_BASE_W = [12, 8, 28, 8, 14, 14, 16, 20, 6];
+const S2_NHOM = [
+  { nhom: 'Gian lận trục lợi',     hasGiaTri: true },
+  { nhom: 'Gian lận bán hàng',     hasGiaTri: true },
+  { nhom: 'Gian lận báo cáo',      hasGiaTri: true },
+  { nhom: 'Sai phạm chấm công',    hasGiaTri: false },
+  { nhom: 'Sai phạm QT/QĐ',        hasGiaTri: false },
+  { nhom: 'Sai sót nghiệp vụ',     hasGiaTri: false },
+  { nhom: 'Liên đới trách nhiệm',  hasGiaTri: false },
+  { nhom: 'Tồn đọng về hàng hóa',  hasGiaTri: false },
+  { nhom: 'Sai phạm khác',          hasGiaTri: false },
+];
 
-  const BASE = ['Ngày KT', 'Mã CH', 'Tên CH', 'Chuỗi', 'QLKV', 'GĐV', 'KSTT', 'Thu tin', 'Số GN'];
-  const header = [...BASE, ...allNhom];
+function buildSheet2Aoa(inspections) {
+  // Build col start index for each nhom group
+  const colStart = {};
+  let col = S2_BASE.length;
+  S2_NHOM.forEach((g) => { colStart[g.nhom] = col; col += g.hasGiaTri ? 3 : 2; });
+  const totalCols = col;
+
+  // Header row 1: base names + group names (merged horizontally)
+  // Header row 2: empty for base (merged vertically) + sub-column names
+  const h1 = Array(totalCols).fill('');
+  const h2 = Array(totalCols).fill('');
+  S2_BASE.forEach((name, i) => { h1[i] = name; });
+
+  const merges = [];
+  S2_BASE.forEach((_, i) => merges.push({ s: { r: 0, c: i }, e: { r: 1, c: i } }));
+
+  S2_NHOM.forEach((g) => {
+    const sc = colStart[g.nhom];
+    const span = g.hasGiaTri ? 3 : 2;
+    h1[sc] = g.nhom;
+    if (span > 1) merges.push({ s: { r: 0, c: sc }, e: { r: 0, c: sc + span - 1 } });
+    h2[sc]     = 'Trạng thái';
+    h2[sc + 1] = 'Nội dung';
+    if (g.hasGiaTri) h2[sc + 2] = 'Giá trị';
+  });
 
   const dataRows = inspections.map((insp) => {
     const byNhom = {};
     (insp.violations || []).forEach((v) => {
       if (!v.nhom) return;
-      if (!byNhom[v.nhom]) byNhom[v.nhom] = [];
-      const hv = Array.isArray(v.hanh_vi) ? v.hanh_vi.join(', ') : (v.hanh_vi || '');
-      byNhom[v.nhom].push(hv || v.mo_ta || '✓');
+      (byNhom[v.nhom] = byNhom[v.nhom] || []).push(v);
     });
-    return [
-      insp.ngayKiemTra,
-      insp.sap,
-      insp.store,
-      insp.chain,
-      insp.qlkv,
-      insp.gdv,
-      insp.kstt,
-      insp.batCapVH,
-      (insp.violations || []).length,
-      ...allNhom.map((n) => (byNhom[n] ? byNhom[n].join(' | ') : '')),
-    ];
+
+    const row = Array(totalCols).fill('');
+    [insp.ngayKiemTra, insp.sap, insp.store, insp.chain, insp.qlkv, insp.gdv,
+      insp.kstt, insp.batCapVH, (insp.violations || []).length].forEach((v, i) => { row[i] = v ?? ''; });
+
+    S2_NHOM.forEach((g) => {
+      const sc = colStart[g.nhom];
+      const vios = byNhom[g.nhom] || [];
+      if (!vios.length) return;
+      row[sc]     = vios.map((v) => v.trang_thai).filter(Boolean).join(' | ');
+      row[sc + 1] = vios.map((v) => [v.mo_ta, v.nguyen_nhan].filter(Boolean).join(' - ')).filter(Boolean).join(' | ');
+      if (g.hasGiaTri) row[sc + 2] = vios.map((v) => v.gia_tri).filter(Boolean).join(' | ');
+    });
+
+    return row;
   });
 
-  return { aoa: [header, ...dataRows], nhomCount: allNhom.length };
+  const colWidths = [
+    ...S2_BASE_W.map((w) => ({ wch: w })),
+    ...S2_NHOM.flatMap((g) => [{ wch: 14 }, { wch: 45 }, ...(g.hasGiaTri ? [{ wch: 12 }] : [])]),
+  ];
+
+  return { aoa: [h1, h2, ...dataRows], merges, colWidths };
 }
 
 function downloadXlsx(inspections, start, end) {
@@ -116,13 +152,10 @@ function downloadXlsx(inspections, start, end) {
   XLSX.utils.book_append_sheet(wb, ws1, 'Chi tiết');
 
   // Sheet 2 — Theo site
-  const { aoa, nhomCount } = buildSheet2Aoa(inspections);
+  const { aoa, merges, colWidths } = buildSheet2Aoa(inspections);
   const ws2 = XLSX.utils.aoa_to_sheet(aoa);
-  const baseCols = [12, 8, 28, 8, 14, 14, 16, 20, 8];
-  ws2['!cols'] = [
-    ...baseCols.map((w) => ({ wch: w })),
-    ...Array(nhomCount).fill({ wch: 35 }),
-  ];
+  ws2['!merges'] = merges;
+  ws2['!cols'] = colWidths;
   XLSX.utils.book_append_sheet(wb, ws2, 'Theo site');
 
   XLSX.writeFile(wb, `GhiNhanVP_${start}_${end}.xlsx`);
@@ -142,6 +175,79 @@ function StatCard({ label, value, sub }) {
       <p className="text-xs text-gray-500 mb-1">{label}</p>
       <p className="text-2xl font-bold text-gray-900">{value}</p>
       {sub && <p className="text-xs text-gray-400 mt-0.5">{sub}</p>}
+    </div>
+  );
+}
+
+function NhomBreakdownCard({ inspections }) {
+  const counts = Object.fromEntries(S2_NHOM.map((g) => [g.nhom, 0]));
+  inspections.forEach((insp) => {
+    (insp.violations || []).forEach((v) => {
+      if (v.nhom && v.nhom in counts) counts[v.nhom]++;
+    });
+  });
+  const total = Object.values(counts).reduce((a, b) => a + b, 0);
+
+  return (
+    <div className="bg-white border border-gray-100 rounded-xl px-5 py-4 shadow-sm flex gap-5 items-center">
+      <div className="shrink-0 border-r border-gray-100 pr-5">
+        <p className="text-xs text-gray-500 mb-1">Ghi nhận</p>
+        <p className="text-2xl font-bold text-gray-900">{total}</p>
+        <p className="text-xs text-gray-400 mt-0.5">vi phạm</p>
+      </div>
+      <div className="grid grid-cols-3 gap-x-6 gap-y-1 flex-1">
+        {S2_NHOM.map((g) => (
+          <div key={g.nhom} className="flex items-center gap-1.5">
+            <span className="text-xs text-gray-500">{g.nhom}</span>
+            <span className={`text-xs font-bold tabular-nums shrink-0 ${counts[g.nhom] > 0 ? 'text-red-600' : 'text-gray-300'}`}>
+              {counts[g.nhom]}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function NhomMultiSelect({ selected, onChange }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const toggle = (nhom) =>
+    onChange(selected.includes(nhom) ? selected.filter((n) => n !== nhom) : [...selected, nhom]);
+
+  const label = selected.length === 0 ? 'Tất cả nhóm' : `${selected.length} nhóm`;
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen((p) => !p)}
+        className="flex items-center gap-2 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 bg-white hover:bg-gray-50 whitespace-nowrap"
+      >
+        {label}
+        <ChevronDown size={14} className={`transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && (
+        <div className="absolute z-20 top-full mt-1 left-0 bg-white border border-gray-200 rounded-lg shadow-lg py-1 min-w-[210px]">
+          {S2_NHOM.map((g) => (
+            <label key={g.nhom} className="flex items-center gap-2 px-3 py-1.5 hover:bg-gray-50 cursor-pointer text-sm text-gray-700">
+              <input type="checkbox" checked={selected.includes(g.nhom)} onChange={() => toggle(g.nhom)} className="accent-indigo-600" />
+              {g.nhom}
+            </label>
+          ))}
+          {selected.length > 0 && (
+            <div className="border-t border-gray-100 mt-1 pt-1 px-3 pb-1">
+              <button onClick={() => onChange([])} className="text-xs text-indigo-600 hover:text-indigo-800">Xóa bộ lọc</button>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -246,6 +352,8 @@ const ViolationReport = () => {
   const [inspections, setInspections] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError]   = useState('');
+  const [searchText, setSearchText]   = useState('');
+  const [selectedNhom, setSelectedNhom] = useState([]);
 
   const fetch = async (s, e) => {
     setLoading(true); setError('');
@@ -262,8 +370,19 @@ const ViolationReport = () => {
   const applyPrevMonth  = () => { const r = prevMonth();  applyRange(r.start, r.end); };
   const applyCustom     = () => fetch(startDate, endDate);
 
-  const totalViolations = inspections.reduce((s, i) => s + (i.violations?.length || 0), 0);
-  const uniqueStores    = new Set(inspections.map((i) => i.sap).filter(Boolean)).size;
+  const filtered = useMemo(() => {
+    let r = inspections;
+    if (searchText.trim()) {
+      const q = searchText.trim().toLowerCase();
+      r = r.filter((i) => (i.sap || '').toLowerCase().includes(q) || (i.store || '').toLowerCase().includes(q));
+    }
+    if (selectedNhom.length > 0) {
+      r = r.filter((i) => (i.violations || []).some((v) => selectedNhom.includes(v.nhom)));
+    }
+    return r;
+  }, [inspections, searchText, selectedNhom]);
+
+  const uniqueStores = new Set(filtered.map((i) => i.sap).filter(Boolean)).size;
 
   return (
     <div className="space-y-4">
@@ -294,9 +413,28 @@ const ViolationReport = () => {
               Tháng trước
             </button>
           </div>
+          <div className="relative flex-1 min-w-[160px] max-w-xs">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+            <input
+              type="text"
+              placeholder="Mã CH / tên CH..."
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+              className="w-full border border-gray-200 rounded-lg pl-8 pr-7 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+            {searchText && (
+              <button onClick={() => setSearchText('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                <X size={13} />
+              </button>
+            )}
+          </div>
+          <NhomMultiSelect selected={selectedNhom} onChange={setSelectedNhom} />
+          {(searchText || selectedNhom.length > 0) && (
+            <span className="text-xs text-gray-400 whitespace-nowrap">{filtered.length}/{inspections.length}</span>
+          )}
           <button
-            onClick={() => downloadXlsx(inspections, startDate, endDate)}
-            disabled={inspections.length === 0}
+            onClick={() => downloadXlsx(filtered, startDate, endDate)}
+            disabled={filtered.length === 0}
             className="ml-auto flex items-center gap-2 px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 disabled:opacity-40 disabled:cursor-not-allowed">
             <Download size={15} /> Tải XLSX
           </button>
@@ -304,10 +442,11 @@ const ViolationReport = () => {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-4">
-        <StatCard label="Ghi nhận" value={inspections.length} sub={`${startDate} → ${endDate}`} />
-        <StatCard label="Vi phạm"  value={totalViolations} />
-        <StatCard label="Cửa hàng" value={uniqueStores} />
+      <div className="grid grid-cols-[minmax(130px,160px)_1fr] gap-4 items-start">
+        <div className="flex flex-col gap-4">
+          <StatCard label="Cửa hàng" value={uniqueStores} sub={`${filtered.length} lượt GN`} />
+        </div>
+        <NhomBreakdownCard inspections={filtered} />
       </div>
 
       {/* Table */}
@@ -321,10 +460,10 @@ const ViolationReport = () => {
           <div className="flex items-center justify-center py-20 text-gray-400 text-sm">Đang tải...</div>
         ) : error ? (
           <div className="flex items-center justify-center py-20 text-red-500 text-sm">{error}</div>
-        ) : inspections.length === 0 ? (
+        ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-gray-400">
             <FileText className="w-10 h-10 mb-3 opacity-40" />
-            <p className="text-sm">Không có dữ liệu trong khoảng thời gian này</p>
+            <p className="text-sm">{inspections.length === 0 ? 'Không có dữ liệu trong khoảng thời gian này' : 'Không có kết quả phù hợp'}</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -341,7 +480,7 @@ const ViolationReport = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {inspections.map((insp) => (
+                {filtered.map((insp) => (
                   <InspectionRow key={insp.id} insp={insp} showKstt={showKstt} />
                 ))}
               </tbody>
