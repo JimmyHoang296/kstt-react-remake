@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Save, Trash, Printer, Plus, Pencil, Trash2 } from "lucide-react";
+import { Save, Trash, Printer, Plus, Pencil, Trash2, Search } from "lucide-react";
 import { api } from "../../api";
 import { supabase } from "../../api/supabaseClient";
 import { downloadBase64 } from "../../assets/helpers";
@@ -53,6 +53,27 @@ const ViolationDetailModal = ({ data, inspection, onClose, onCreated, onUpdated,
   const [loadingVio, setLoadingVio] = useState(false);
   const [itemModal, setItemModal] = useState({ open: false, item: null });
   const [loading, setLoading] = useState(false);
+  const [storeSearching, setStoreSearching] = useState(false);
+  const [storeResults, setStoreResults] = useState([]);
+
+  const handleStoreLookup = async () => {
+    if (!formData.sap?.trim()) { addToast('Nhập mã CH trước', 'error'); return; }
+    setStoreSearching(true);
+    setStoreResults([]);
+    const r = await api.searchStore({ site: formData.sap.trim() });
+    setStoreSearching(false);
+    if (!r.result?.length) { addToast('Không tìm thấy cửa hàng', 'error'); return; }
+    if (r.result.length === 1) {
+      applyStore(r.result[0]);
+    } else {
+      setStoreResults(r.result);
+    }
+  };
+
+  const applyStore = (s) => {
+    setFormData((p) => ({ ...p, store: s.siteName || '', qlkv: s.QLKV || '', gdv: s.GDV || '' }));
+    setStoreResults([]);
+  };
 
   useEffect(() => {
     if (currentId) fetchViolations(currentId);
@@ -187,10 +208,29 @@ const ViolationDetailModal = ({ data, inspection, onClose, onCreated, onUpdated,
         <div className="p-4 space-y-4">
           {/* Inspection info grid */}
           <div className="grid grid-cols-4 gap-3">
-            <div>
+            <div className="relative">
               <label className="block text-xs font-medium text-gray-500 mb-1">Mã CH <span className="text-red-500">*</span></label>
-              <input type="text" name="sap" value={formData.sap || ''} onChange={handleChange}
-                className="w-full px-2 py-1.5 border rounded text-sm" />
+              <div className="flex gap-1">
+                <input type="text" name="sap" value={formData.sap || ''}
+                  onChange={(e) => { handleChange(e); setStoreResults([]); }}
+                  className="flex-1 min-w-0 px-2 py-1.5 border rounded text-sm" />
+                <button type="button" onClick={handleStoreLookup} disabled={storeSearching}
+                  className="shrink-0 px-2 py-1.5 border rounded text-sm bg-gray-50 hover:bg-indigo-50 hover:border-indigo-300 text-gray-600 hover:text-indigo-600 disabled:opacity-50"
+                  title="Tìm cửa hàng">
+                  <Search size={14} className={storeSearching ? 'animate-spin' : ''} />
+                </button>
+              </div>
+              {storeResults.length > 0 && (
+                <div className="absolute z-20 top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg w-72 max-h-52 overflow-y-auto">
+                  {storeResults.map((s) => (
+                    <button key={s.site} type="button" onClick={() => applyStore(s)}
+                      className="w-full text-left px-3 py-2 text-xs hover:bg-indigo-50 border-b border-gray-100 last:border-0">
+                      <span className="font-medium text-gray-800">{s.site}</span>
+                      <span className="text-gray-500 ml-2">{s.siteName}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-500 mb-1">Tên CH</label>
