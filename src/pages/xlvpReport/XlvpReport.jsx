@@ -76,43 +76,74 @@ function applyFilter(rows, q) {
 }
 
 // ─── Excel helpers ─────────────────────────────────────────────────────────────
+const WIDE = new Set(['clarificationDetail', 'violationText', 'disciplinaryAction', 'store']);
+const MED  = new Set(['email', 'empId', 'empName', 'QLKV', 'GDV', 'GDVNote', 'disciplinaryGroup', 'Lỗi', 'NOTE', 'Note']);
+
 const COLS_1 = [
-  ['ID',               (r) => r.id],
-  ['Tuần',             (r) => r.week],
-  ['Mã CH',            (r) => r.sap],
-  ['Tên CH',           (r) => r.store],
-  ['KSTT',             (r) => r.kstt_submitted],
-  ['Nhân viên',        (r) => r.emp_name],
-  ['Chức danh',        (r) => r.emp_title],
-  ['Nội dung vi phạm', (r) => r.violation_text],
-  ['Giá trị',          (r) => r.loss_value],
-  ['Thu hồi',          (r) => r.recover_value],
-  ['Ghi chú',          (r) => r.Note],
+  ['region',              (r) => r.region],
+  ['week',                (r) => r.week],
+  ['approvedDate',        (r) => r.approved_date],
+  ['email',               (r) => r.email],
+  ['ksttSubmitted',       (r) => r.kstt_submitted],
+  ['ksttPIC',             (r) => r.kstt_pic],
+  ['model',               (r) => r.model],
+  ['sap',                 (r) => r.sap],
+  ['store',               (r) => r.store],
+  ['QLKV',                (r) => r.QLKV ?? r.qlkv],
+  ['source',              (r) => r.source],
+  ['empId',               (r) => r.emp_id],
+  ['empName',             (r) => r.emp_name],
+  ['empRank',             (r) => r.emp_rank],
+  ['empTitle',            (r) => r.emp_title],
+  ['clarificationDetail', (r) => r.clarification_detail],
+  ['violationText',       (r) => r.violation_text],
+  ['violationType',       (r) => r.violation_type],
+  ['lossValue',           (r) => r.loss_value],
+  ['recoverValue',        (r) => r.recover_value],
+  ['GDV',                 (r) => r.GDV ?? r.gdv],
+  ['GDVNote',             (r) => r.GDVNote ?? r.gdv_note],
+  ['discoveryDate',       (r) => r.discovery_date],
+  ['finishedDate',        (r) => r.finished_date],
+  ['Note',                (r) => r.Note],
 ];
 const COLS_K = [
-  ['ID',               (r) => r.id],
-  ['Tuần',             (r) => r.week],
-  ['Mã CH',            (r) => r.sap],
-  ['Tên CH',           (r) => r.store],
-  ['KSTT',             (r) => r.kstt_submitted],
-  ['Nhân viên',        (r) => r.emp_name],
-  ['Chức danh',        (r) => r.emp_title],
-  ['Nội dung vi phạm', (r) => r.violation_text],
-  ['Hình thức XLVP',   (r) => r.disciplinary_action],
-  ['Trạng thái',       (r) => r.status],
-  ['Ghi chú',          (r) => r.NOTE],
+  ['region',              (r) => r.region],
+  ['week',                (r) => r.week],
+  ['approvedDate',        (r) => r.approved_date],
+  ['email',               (r) => r.email],
+  ['ksttSubmitted',       (r) => r.kstt_submitted],
+  ['ksttPIC',             (r) => r.kstt_pic],
+  ['source',              (r) => r.source],
+  ['model',               (r) => r.model],
+  ['sap',                 (r) => r.sap],
+  ['store',               (r) => r.store],
+  ['empId',               (r) => r.emp_id],
+  ['empName',             (r) => r.emp_name],
+  ['empRank',             (r) => r.emp_rank],
+  ['empTitle',            (r) => r.emp_title],
+  ['violationText',       (r) => r.violation_text],
+  ['disciplinaryGroup',   (r) => r.disciplinary_group],
+  ['disciplinaryAction',  (r) => r.disciplinary_action],
+  ['Lỗi',                 (r) => r.loi ?? r.Lỗi],
+  ['status',              (r) => r.status],
+  ['NOTE',                (r) => r.NOTE],
 ];
 
-function buildXlsx(rows, cols, sheetName, filename) {
+function makeSheet(rows, cols) {
   const data = rows.map((r) => {
     const obj = {};
     cols.forEach(([h, fn]) => { obj[h] = fn(r) ?? ''; });
     return obj;
   });
   const ws = XLSX.utils.json_to_sheet(data);
-  ws['!cols'] = cols.map(([h]) => ({ wch: h === 'Nội dung vi phạm' || h === 'Hình thức XLVP' ? 36 : h === 'Tên CH' ? 28 : 16 }));
+  ws['!cols'] = cols.map(([h]) => ({ wch: WIDE.has(h) ? 48 : MED.has(h) ? 28 : 14 }));
+  return ws;
+}
+
+function buildXlsxBoth(rows1, rowsK, filename) {
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, sheetName);
+  XLSX.utils.book_append_sheet(wb, makeSheet(rows1, COLS_1), 'TH nhóm 1');
+  XLSX.utils.book_append_sheet(wb, makeSheet(rowsK, COLS_K), 'TH nhóm khác');
   XLSX.writeFile(wb, filename);
 }
 
@@ -522,8 +553,7 @@ const XlvpReport = () => {
 
   // Download
   const handleDownload = () => {
-    if (tab === 'nhom1') buildXlsx(filtered1, COLS_1, 'Nhóm 1', 'TH_Nhom1.xlsx');
-    else buildXlsx(filteredK, COLS_K, 'Nhóm Khác', 'TH_NhomKhac.xlsx');
+    buildXlsxBoth(filtered1, filteredK, `TH_XLVP_${startDate}_${endDate}.xlsx`);
   };
 
   // Upload
