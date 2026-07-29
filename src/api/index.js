@@ -254,6 +254,14 @@ export const api = {
   },
 
   // ---- Violation Report (inspections + violations joined) ----
+  getKsttHodMap: async () => {
+    const { data, error } = await supabase.from('app_user').select('name, hod');
+    if (error) return { success: false };
+    const map = {};
+    (data || []).forEach((r) => { if (r.name) map[r.name] = r.hod || '—'; });
+    return { success: true, data: map };
+  },
+
   getInspectionsForReport: async ({ startDate, endDate, role, userName, emps, leadGhiNhan }) => {
     let q = supabase
       .from('inspections')
@@ -471,6 +479,45 @@ export const api = {
     return { success: true, data: { emps, calendar } };
   },
 
+  // ---- Store Import (replace all) ----
+  importStores: async (rows) => {
+    const toNum  = (v) => (v == null || v === '') ? null : (isNaN(Number(v)) ? null : Number(v));
+    const toStr  = (v) => (v == null || v === '') ? null : String(v).trim() || null;
+
+    const mapped = rows
+      .map((r) => ({
+        store:       String(r.store ?? '').trim(),
+        store_name:  toStr(r.store_name),
+        lat:         toNum(r.lat),
+        long:        toNum(r.long),
+        address:     toStr(r.address),
+        CHT:         toStr(r.CHT),
+        'SDT CHT':   toNum(r['SDT CHT']),
+        QLKV:        toStr(r.QLKV),
+        'SDT QLKV':  toNum(r['SDT QLKV']),
+        'QLKV id':   toStr(r['QLKV id']),
+        'GDV id':    toStr(r['GDV id']),
+        GDV:         toStr(r.GDV),
+        'GDM id':    toStr(r['GDM id']),
+        GDM:         toStr(r.GDM),
+        'GDC id':    toStr(r['GDC id']),
+        GDC:         toStr(r.GDC),
+        kstt:        toStr(r.kstt),
+        chuoi:       toStr(r.chuoi),
+      }))
+      .filter((r) => r.store);
+
+    const { error: delErr } = await supabase.from('stores').delete().neq('store', '');
+    if (delErr) return { success: false, message: delErr.message };
+
+    const BATCH = 500;
+    for (let i = 0; i < mapped.length; i += BATCH) {
+      const { error } = await supabase.from('stores').insert(mapped.slice(i, i + BATCH));
+      if (error) return { success: false, message: error.message };
+    }
+    return { success: true, count: mapped.length };
+  },
+
   // ---- Store Search ----
   searchStore: async ({ site, siteName, siteAdd }) => {
     let q = supabase.from('stores').select('*');
@@ -490,6 +537,7 @@ export const api = {
       KSTT: r.kstt,
       lat: r.lat,
       long: r.long,
+      chuoi: r.chuoi,
     }));
     return { result };
   },

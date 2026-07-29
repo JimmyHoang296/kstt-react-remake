@@ -9,6 +9,8 @@ import ViolationItemModal from "./ViolationItemModal";
 
 const CHAIN_OPTIONS = ["rural", "urban", "winlife"];
 
+const CHUOI_MAP = { urban: 'urban', rural: 'rural', win: 'winlife', winlife: 'winlife' };
+
 const TRANG_THAI_COLORS = {
   'Mới': 'bg-blue-100 text-blue-700',
   'Đang xử lý': 'bg-yellow-100 text-yellow-700',
@@ -71,7 +73,8 @@ const ViolationDetailModal = ({ data, inspection, onClose, onCreated, onUpdated,
   };
 
   const applyStore = (s) => {
-    setFormData((p) => ({ ...p, store: s.siteName || '', qlkv: s.QLKV || '', gdv: s.GDV || '' }));
+    const chain = CHUOI_MAP[(s.chuoi || '').toLowerCase()] || s.chuoi?.toLowerCase() || '';
+    setFormData((p) => ({ ...p, store: s.siteName || '', qlkv: s.QLKV || '', gdv: s.GDV || '', chain }));
     setStoreResults([]);
   };
 

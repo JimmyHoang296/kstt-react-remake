@@ -81,6 +81,18 @@ const S2_NHOM = [
   { nhom: 'Sai phạm khác',          hasGiaTri: false },
 ];
 
+const NHOM_SHORT = {
+  'Gian lận trục lợi':    'GL Trục lợi',
+  'Gian lận bán hàng':    'GL Bán hàng',
+  'Gian lận báo cáo':     'GL Báo cáo',
+  'Sai phạm chấm công':   'SP Chấm công',
+  'Sai phạm QT/QĐ':       'SP QT/QĐ',
+  'Sai sót nghiệp vụ':    'SS Nghiệp vụ',
+  'Liên đới trách nhiệm': 'LD Trách nhiệm',
+  'Tồn đọng về hàng hóa': 'TĐ Hàng hóa',
+  'Sai phạm khác':        'SP Khác',
+};
+
 function buildSheet2Aoa(inspections) {
   // Build col start index for each nhom group
   const colStart = {};
@@ -252,6 +264,159 @@ function NhomMultiSelect({ selected, onChange }) {
   );
 }
 
+function KsttMultiSelect({ ksttList, selected, onChange }) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const ref = useRef(null);
+  const searchRef = useRef(null);
+
+  useEffect(() => {
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  useEffect(() => { if (open) searchRef.current?.focus(); }, [open]);
+
+  const toggle = (k) => onChange(selected.includes(k) ? selected.filter((n) => n !== k) : [...selected, k]);
+  const label = selected.length === 0 ? 'Tất cả KSTT' : `${selected.length} KSTT`;
+  const visible = search.trim()
+    ? ksttList.filter((k) => k.toLowerCase().includes(search.toLowerCase()))
+    : ksttList;
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen((p) => !p)}
+        className="flex items-center gap-2 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 bg-white hover:bg-gray-50 whitespace-nowrap"
+      >
+        {label}
+        <ChevronDown size={14} className={`transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && (
+        <div className="absolute z-20 top-full mt-1 left-0 bg-white border border-gray-200 rounded-lg shadow-lg min-w-[210px]">
+          <div className="px-2 pt-2 pb-1.5 border-b border-gray-100">
+            <div className="relative">
+              <Search size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+              <input
+                ref={searchRef}
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Tìm KSTT..."
+                className="w-full pl-6 pr-2 py-1 text-xs border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-400"
+              />
+            </div>
+          </div>
+          <div className="max-h-52 overflow-y-auto py-1">
+            {visible.length === 0 && <p className="px-3 py-2 text-xs text-gray-400">Không tìm thấy</p>}
+            {visible.map((k) => (
+              <label key={k} className="flex items-center gap-2 px-3 py-1.5 hover:bg-gray-50 cursor-pointer text-sm text-gray-700">
+                <input type="checkbox" checked={selected.includes(k)} onChange={() => toggle(k)} className="accent-indigo-600" />
+                {k}
+              </label>
+            ))}
+          </div>
+          {selected.length > 0 && (
+            <div className="border-t border-gray-100 px-3 py-1.5">
+              <button onClick={() => onChange([])} className="text-xs text-indigo-600 hover:text-indigo-800">Xóa bộ lọc</button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function KsttStatsTable({ inspections, ksttHodMap }) {
+  const byKstt = {};
+  inspections.forEach((insp) => {
+    const kstt = insp.kstt || '—';
+    if (!byKstt[kstt]) byKstt[kstt] = { luotGN: 0, stores: new Set(), byNhom: {} };
+    byKstt[kstt].luotGN++;
+    if (insp.sap) byKstt[kstt].stores.add(insp.sap);
+    (insp.violations || []).forEach((v) => {
+      if (v.nhom) byKstt[kstt].byNhom[v.nhom] = (byKstt[kstt].byNhom[v.nhom] || 0) + 1;
+    });
+  });
+
+  if (Object.keys(byKstt).length === 0) return null;
+
+  const byHod = {};
+  Object.entries(byKstt).forEach(([kstt, s]) => {
+    const hod = ksttHodMap[kstt] || '—';
+    if (!byHod[hod]) byHod[hod] = [];
+    byHod[hod].push({ kstt, luotGN: s.luotGN, storeCount: s.stores.size, byNhom: s.byNhom });
+  });
+
+  const hodEntries = Object.entries(byHod).sort(([a], [b]) => a.localeCompare(b, 'vi'));
+  hodEntries.forEach(([, list]) => list.sort((a, b) => a.kstt.localeCompare(b.kstt, 'vi')));
+
+  const totalCols = 2 + S2_NHOM.length;
+
+  return (
+    <div className="bg-white border border-gray-100 rounded-xl shadow-sm overflow-hidden">
+      <div className="flex items-center gap-2 px-5 py-3 border-b border-gray-100">
+        <BarChart2 size={16} className="text-indigo-500" />
+        <h3 className="text-sm font-bold text-gray-900">Thống kê theo KSTT</h3>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="min-w-full text-xs">
+          <thead className="bg-gray-50 border-b border-gray-100">
+            <tr>
+              <th className="px-4 py-2 text-left font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap sticky left-0 bg-gray-50 z-10">KSTT</th>
+              <th className="px-3 py-2 text-right font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Lượt GN</th>
+              <th className="px-3 py-2 text-right font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">CH</th>
+              {S2_NHOM.map((g) => (
+                <th key={g.nhom} title={g.nhom} className="px-3 py-2 text-right font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                  {NHOM_SHORT[g.nhom] || g.nhom}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-50">
+            {hodEntries.map(([hod, list]) => {
+              const tot = list.reduce((acc, k) => {
+                acc.luotGN += k.luotGN;
+                acc.storeCount += k.storeCount;
+                S2_NHOM.forEach((g) => { acc.byNhom[g.nhom] = (acc.byNhom[g.nhom] || 0) + (k.byNhom[g.nhom] || 0); });
+                return acc;
+              }, { luotGN: 0, storeCount: 0, byNhom: {} });
+              return (
+                <React.Fragment key={hod}>
+                  <tr className="bg-indigo-50/50">
+                    <td colSpan={totalCols} className="px-4 py-1.5 font-semibold text-indigo-700 sticky left-0 bg-indigo-50/50">
+                      {hod}
+                      <span className="ml-2 font-normal text-indigo-400">
+                        {tot.luotGN} lượt · {tot.storeCount} CH
+                      </span>
+                    </td>
+                  </tr>
+                  {list.map((k) => (
+                    <tr key={k.kstt} className="hover:bg-gray-50">
+                      <td className="px-4 py-2 pl-8 text-gray-700 whitespace-nowrap sticky left-0 bg-white hover:bg-gray-50">{k.kstt}</td>
+                      <td className="px-3 py-2 text-right tabular-nums text-gray-600">{k.luotGN}</td>
+                      <td className="px-3 py-2 text-right tabular-nums text-gray-600">{k.storeCount}</td>
+                      {S2_NHOM.map((g) => {
+                        const cnt = k.byNhom[g.nhom] || 0;
+                        return (
+                          <td key={g.nhom} className="px-3 py-2 text-right tabular-nums">
+                            <span className={cnt > 0 ? 'font-semibold text-red-600' : 'text-gray-200'}>{cnt > 0 ? cnt : '—'}</span>
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </React.Fragment>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 function InspectionRow({ insp, showKstt }) {
   const [open, setOpen] = useState(false);
   const vios = insp.violations || [];
@@ -354,6 +519,9 @@ const ViolationReport = () => {
   const [error, setError]   = useState('');
   const [searchText, setSearchText]   = useState('');
   const [selectedNhom, setSelectedNhom] = useState([]);
+  const [selectedKstt, setSelectedKstt] = useState([]);
+  const [ksttHodMap, setKsttHodMap] = useState({});
+  const [activeTab, setActiveTab] = useState('ch');
 
   const fetch = async (s, e) => {
     setLoading(true); setError('');
@@ -365,10 +533,20 @@ const ViolationReport = () => {
 
   useEffect(() => { fetch(startDate, endDate); }, []);
 
+  useEffect(() => {
+    if (!showKstt) return;
+    api.getKsttHodMap().then((r) => { if (r.success) setKsttHodMap(r.data); });
+  }, [showKstt]);
+
   const applyRange = (s, e) => { setStartDate(s); setEndDate(e); fetch(s, e); };
   const applyThisMonth  = () => { const r = thisMonth();  applyRange(r.start, r.end); };
   const applyPrevMonth  = () => { const r = prevMonth();  applyRange(r.start, r.end); };
   const applyCustom     = () => fetch(startDate, endDate);
+
+  const ksttList = useMemo(
+    () => [...new Set(inspections.map((i) => i.kstt).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'vi')),
+    [inspections]
+  );
 
   const filtered = useMemo(() => {
     let r = inspections;
@@ -379,8 +557,11 @@ const ViolationReport = () => {
     if (selectedNhom.length > 0) {
       r = r.filter((i) => (i.violations || []).some((v) => selectedNhom.includes(v.nhom)));
     }
+    if (selectedKstt.length > 0) {
+      r = r.filter((i) => selectedKstt.includes(i.kstt));
+    }
     return r;
-  }, [inspections, searchText, selectedNhom]);
+  }, [inspections, searchText, selectedNhom, selectedKstt]);
 
   const uniqueStores = new Set(filtered.map((i) => i.sap).filter(Boolean)).size;
 
@@ -429,7 +610,8 @@ const ViolationReport = () => {
             )}
           </div>
           <NhomMultiSelect selected={selectedNhom} onChange={setSelectedNhom} />
-          {(searchText || selectedNhom.length > 0) && (
+          {showKstt && <KsttMultiSelect ksttList={ksttList} selected={selectedKstt} onChange={setSelectedKstt} />}
+          {(searchText || selectedNhom.length > 0 || selectedKstt.length > 0) && (
             <span className="text-xs text-gray-400 whitespace-nowrap">{filtered.length}/{inspections.length}</span>
           )}
           <button
@@ -441,7 +623,7 @@ const ViolationReport = () => {
         </div>
       </div>
 
-      {/* Stats */}
+      {/* Stats — always visible */}
       <div className="grid grid-cols-[minmax(130px,160px)_1fr] gap-4 items-start">
         <div className="flex flex-col gap-4">
           <StatCard label="Cửa hàng" value={uniqueStores} sub={`${filtered.length} lượt GN`} />
@@ -449,45 +631,74 @@ const ViolationReport = () => {
         <NhomBreakdownCard inspections={filtered} />
       </div>
 
-      {/* Table */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-        <div className="flex items-center gap-2 px-6 py-4 border-b border-gray-100">
-          <BarChart2 size={18} className="text-indigo-500" />
-          <h2 className="text-base font-bold text-gray-900">Danh sách ghi nhận</h2>
+      {/* Tab selector — only for hod/director/leadGhiNhan */}
+      {showKstt && (
+        <div className="flex gap-1 bg-gray-100 p-1 rounded-xl w-fit">
+          <button
+            onClick={() => setActiveTab('ch')}
+            className={`px-4 py-1.5 text-sm font-medium rounded-lg transition-colors ${activeTab === 'ch' ? 'bg-white shadow-sm text-indigo-600' : 'text-gray-500 hover:text-gray-700'}`}
+          >
+            Theo cửa hàng
+          </button>
+          <button
+            onClick={() => setActiveTab('kstt')}
+            className={`px-4 py-1.5 text-sm font-medium rounded-lg transition-colors ${activeTab === 'kstt' ? 'bg-white shadow-sm text-indigo-600' : 'text-gray-500 hover:text-gray-700'}`}
+          >
+            Theo KSTT
+          </button>
         </div>
+      )}
 
-        {loading ? (
-          <div className="flex items-center justify-center py-20 text-gray-400 text-sm">Đang tải...</div>
-        ) : error ? (
-          <div className="flex items-center justify-center py-20 text-red-500 text-sm">{error}</div>
-        ) : filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-gray-400">
-            <FileText className="w-10 h-10 mb-3 opacity-40" />
-            <p className="text-sm">{inspections.length === 0 ? 'Không có dữ liệu trong khoảng thời gian này' : 'Không có kết quả phù hợp'}</p>
+      {/* Tab: Theo cửa hàng */}
+      {(!showKstt || activeTab === 'ch') && (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+            <div className="flex items-center gap-2 px-6 py-4 border-b border-gray-100">
+              <BarChart2 size={18} className="text-indigo-500" />
+              <h2 className="text-base font-bold text-gray-900">Danh sách ghi nhận</h2>
+            </div>
+
+            {loading ? (
+              <div className="flex items-center justify-center py-20 text-gray-400 text-sm">Đang tải...</div>
+            ) : error ? (
+              <div className="flex items-center justify-center py-20 text-red-500 text-sm">{error}</div>
+            ) : filtered.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 text-gray-400">
+                <FileText className="w-10 h-10 mb-3 opacity-40" />
+                <p className="text-sm">{inspections.length === 0 ? 'Không có dữ liệu trong khoảng thời gian này' : 'Không có kết quả phù hợp'}</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full">
+                  <thead className="bg-gray-50 border-y border-gray-100">
+                    <tr>
+                      <th className="w-6" />
+                      <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Ngày KT</th>
+                      {showKstt && <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">KSTT</th>}
+                      <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Mã CH</th>
+                      <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Tên CH</th>
+                      <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Nhóm vi phạm</th>
+                      <th className="px-3 py-2.5 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider"># VP</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {filtered.map((insp) => (
+                      <InspectionRow key={insp.id} insp={insp} showKstt={showKstt} />
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
+      )}
+
+      {/* Tab: Theo KSTT */}
+      {showKstt && activeTab === 'kstt' && (
+        loading ? (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 flex items-center justify-center py-20 text-gray-400 text-sm">Đang tải...</div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full">
-              <thead className="bg-gray-50 border-y border-gray-100">
-                <tr>
-                  <th className="w-6" />
-                  <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Ngày KT</th>
-                  {showKstt && <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">KSTT</th>}
-                  <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Mã CH</th>
-                  <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Tên CH</th>
-                  <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Nhóm vi phạm</th>
-                  <th className="px-3 py-2.5 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider"># VP</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {filtered.map((insp) => (
-                  <InspectionRow key={insp.id} insp={insp} showKstt={showKstt} />
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+          <KsttStatsTable inspections={filtered} ksttHodMap={ksttHodMap} />
+        )
+      )}
     </div>
   );
 };

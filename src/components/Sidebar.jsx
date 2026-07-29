@@ -53,8 +53,13 @@ const Sidebar = () => {
       user?.role === "emp" ? navItemsEmp :
         navItemsLeader;
 
+  const baseHasViolationReport = baseItems.some((i) => i.page === '/violation-report');
+
   const navItems = [
     ...baseItems,
+    ...(user?.leadGhiNhan && !baseHasViolationReport
+      ? [{ name: "TH ghi nhận", icon: <BarChart2 size={20} />, page: "/violation-report" }]
+      : []),
     ...(user?.leadXlvp ? [{ name: "Báo cáo XLVP", icon: <FileCheck size={20} />, page: "/xlvp-report" }] : []),
     ...(user?.isAdmin ? [{ name: "Quản trị", icon: <Settings size={20} />, page: "/admin" }] : []),
   ];

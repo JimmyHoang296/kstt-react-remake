@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { Pencil, Plus, Save, Trash2, Users, X } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import * as XLSX from 'xlsx';
+import { Pencil, Plus, Save, Trash2, Users, X, Upload, FileSpreadsheet, CheckCircle2 } from 'lucide-react';
 import { api } from '../../api';
 import useStore from '../../store/useStore';
 
@@ -8,6 +9,7 @@ const TABS = [
   { key: 'nhom_loi',      label: 'Nhóm lỗi' },
   { key: 'nhom_ghi_nhan', label: 'Nhóm ghi nhận' },
   { key: 'setup',         label: 'Cài đặt' },
+  { key: 'import',        label: 'Import dữ liệu' },
 ];
 
 const INPUT = 'w-full border border-gray-200 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400';
@@ -566,6 +568,158 @@ function SetupEditor() {
   );
 }
 
+// ─── Import dữ liệu ───────────────────────────────────────────────────────────
+
+const STORE_COLS = ['store','store_name','lat','long','address','CHT','SDT CHT','QLKV','SDT QLKV','QLKV id','GDV id','GDV','GDM id','GDM','GDC id','GDC','kstt','chuoi'];
+
+function ImportEditor() {
+  const addToast = useStore((s) => s.addToast);
+  const fileRef  = useRef(null);
+
+  const [preview,   setPreview]   = useState(null);   // { rows, count, fileName }
+  const [importing, setImporting] = useState(false);
+  const [done,      setDone]      = useState(null);    // count after success
+
+  const handleFile = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setDone(null);
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const wb   = XLSX.read(ev.target.result, { type: 'array' });
+        const ws   = wb.Sheets[wb.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
+        if (!rows.length || !('store' in rows[0])) {
+          addToast('File không đúng định dạng — thiếu cột "store"', 'error');
+          return;
+        }
+        setPreview({ rows, count: rows.length, fileName: file.name });
+      } catch {
+        addToast('Không đọc được file', 'error');
+      }
+    };
+    reader.readAsArrayBuffer(file);
+    e.target.value = '';
+  };
+
+  const handleImport = async () => {
+    if (!preview?.rows?.length) return;
+    if (!window.confirm(
+      `Thao tác này sẽ XÓA TOÀN BỘ ${preview.count} stores hiện tại và thay bằng dữ liệu mới.\n\nTiếp tục?`
+    )) return;
+
+    setImporting(true);
+    const r = await api.importStores(preview.rows);
+    setImporting(false);
+
+    if (r.success) {
+      setDone(r.count);
+      setPreview(null);
+      addToast(`Import thành công ${r.count} stores`);
+    } else {
+      addToast(r.message || 'Import thất bại', 'error');
+    }
+  };
+
+  return (
+    <div className="space-y-5">
+      {/* Store List */}
+      <div className="border border-gray-200 rounded-xl p-5 space-y-4">
+        <div className="flex items-start justify-between">
+          <div>
+            <div className="flex items-center gap-2">
+              <FileSpreadsheet size={16} className="text-indigo-500" />
+              <span className="font-semibold text-sm text-gray-800">Import Store List</span>
+            </div>
+            <p className="text-xs text-gray-400 mt-0.5">
+              Thay thế toàn bộ bảng <code className="bg-gray-100 px-1 rounded">stores</code> bằng file mới.
+              File mẫu: <span className="font-medium text-gray-600">Storelist.xlsx</span>
+            </p>
+            <p className="text-xs text-gray-400 mt-0.5">
+              Cột cần có: {STORE_COLS.join(' · ')}
+            </p>
+          </div>
+        </div>
+
+        {/* File picker */}
+        <div className="flex items-center gap-3 flex-wrap">
+          <input ref={fileRef} type="file" accept=".xlsx,.xls" onChange={handleFile} className="hidden" />
+          <button
+            onClick={() => fileRef.current?.click()}
+            className="flex items-center gap-1.5 px-3 py-2 border border-dashed border-gray-300 rounded-lg text-sm text-gray-600 hover:border-indigo-400 hover:text-indigo-600 transition-colors">
+            <Upload size={14} /> Chọn file (.xlsx)
+          </button>
+
+          {preview && (
+            <span className="text-sm text-gray-700">
+              <span className="font-medium text-indigo-600">{preview.fileName}</span>
+              {' — '}<span className="font-semibold">{preview.count.toLocaleString()}</span> dòng
+            </span>
+          )}
+
+          {done != null && !preview && (
+            <span className="flex items-center gap-1.5 text-sm text-green-600">
+              <CheckCircle2 size={14} /> Đã import {done.toLocaleString()} stores
+            </span>
+          )}
+        </div>
+
+        {/* Preview table */}
+        {preview && (
+          <div className="overflow-x-auto rounded-lg border border-gray-100 max-h-52">
+            <table className="min-w-full text-xs">
+              <thead className="bg-gray-50 sticky top-0">
+                <tr>
+                  {['store','store_name','chuoi','QLKV','GDV','kstt'].map((h) => (
+                    <th key={h} className="px-3 py-2 text-left font-semibold text-gray-500 uppercase whitespace-nowrap">{h}</th>
+                  ))}
+                  <th className="px-3 py-2 text-left font-semibold text-gray-500 uppercase">...</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {preview.rows.slice(0, 5).map((r, i) => (
+                  <tr key={i} className="hover:bg-gray-50">
+                    <td className="px-3 py-1.5 font-mono text-gray-700">{r.store}</td>
+                    <td className="px-3 py-1.5 text-gray-600">{r.store_name}</td>
+                    <td className="px-3 py-1.5 text-gray-600">{r.chuoi}</td>
+                    <td className="px-3 py-1.5 text-gray-600">{r.QLKV}</td>
+                    <td className="px-3 py-1.5 text-gray-600">{r.GDV}</td>
+                    <td className="px-3 py-1.5 text-gray-600">{r.kstt}</td>
+                    <td className="px-3 py-1.5 text-gray-400">...</td>
+                  </tr>
+                ))}
+                {preview.count > 5 && (
+                  <tr>
+                    <td colSpan={7} className="px-3 py-1.5 text-gray-400 italic text-center">
+                      ... và {(preview.count - 5).toLocaleString()} dòng nữa
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {preview && (
+          <div className="flex items-center gap-3">
+            <button onClick={handleImport} disabled={importing}
+              className="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700 disabled:opacity-60">
+              <Upload size={14} />
+              {importing ? `Đang import...` : `Import ${preview.count.toLocaleString()} stores`}
+            </button>
+            <button onClick={() => setPreview(null)} disabled={importing}
+              className="px-3 py-2 text-sm border rounded-lg text-gray-600 hover:bg-gray-50 disabled:opacity-50">
+              Hủy
+            </button>
+            <span className="text-xs text-red-500">Dữ liệu cũ sẽ bị xóa hoàn toàn</span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 const AdminPage = () => {
@@ -600,6 +754,7 @@ const AdminPage = () => {
           {tab === 'nhom_loi'      && <NhomLoiEditor />}
           {tab === 'nhom_ghi_nhan' && <NhomGhiNhanEditor />}
           {tab === 'setup'         && <SetupEditor />}
+          {tab === 'import'        && <ImportEditor />}
         </div>
       </div>
     </div>
