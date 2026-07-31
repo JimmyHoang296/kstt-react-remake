@@ -11,12 +11,16 @@ const INPUT = "border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline
 
 const filterFn = (item, q) =>
   (!q.sap   || item.sap?.toLowerCase().includes(q.sap.toLowerCase())) &&
-  (!q.store || item.store?.toLowerCase().includes(q.store.toLowerCase()));
+  (!q.store || item.store?.toLowerCase().includes(q.store.toLowerCase())) &&
+  (!q.kstt  || item.kstt?.toLowerCase().includes(q.kstt.toLowerCase()));
 
 const ViolationManager = () => {
   const data     = useStore((state) => state.data);
   const setData  = useStore((state) => state.setData);
   const addToast = useStore((state) => state.addToast);
+
+  const { role, name: userName } = data.user || {};
+  const defaultKstt = role === 'emp' ? (userName || '') : '';
 
   const {
     items: inspections, setItems: setInspections,
@@ -29,7 +33,7 @@ const ViolationManager = () => {
     openModal, closeModal,
   } = useManagerPage({
     initialItems: data.inspections || [],
-    initialSearch: { sap: '', store: '' },
+    initialSearch: { sap: '', store: '', kstt: defaultKstt },
     filterFn,
   });
 
@@ -63,6 +67,10 @@ const ViolationManager = () => {
           <div className="flex-1 min-w-[160px]">
             <label className="block text-xs font-medium text-gray-500 mb-1">Tên CH</label>
             <input name="store" value={searchQuery.store} onChange={handleSearchChange} placeholder="Tìm theo tên CH..." className={INPUT} />
+          </div>
+          <div className="flex-1 min-w-[160px]">
+            <label className="block text-xs font-medium text-gray-500 mb-1">KSTT</label>
+            <input name="kstt" value={searchQuery.kstt} onChange={handleSearchChange} placeholder="Tìm theo KSTT..." className={INPUT} />
           </div>
           <button onClick={resetSearch} className="inline-flex items-center gap-2 px-3 py-2 bg-white border border-gray-200 text-gray-600 text-sm rounded-lg hover:bg-gray-50 transition-colors">
             Xoá lọc

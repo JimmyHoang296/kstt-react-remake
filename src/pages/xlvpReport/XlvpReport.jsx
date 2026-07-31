@@ -65,7 +65,8 @@ function applyFilter(rows, q) {
     if (w && String(r.week || '') !== w) return false;
     if (st) {
       const statusVal = r.Note ?? r.status ?? '';
-      if (statusVal !== st) return false;
+      if (st === '__blank__') { if (statusVal !== '' && statusVal != null) return false; }
+      else if (statusVal !== st) return false;
     }
     if (s) {
       const hay = [r.sap, r.store, r.emp_name, r.kstt_submitted].join(' ').toLowerCase();
@@ -78,6 +79,13 @@ function applyFilter(rows, q) {
 // ─── Excel helpers ─────────────────────────────────────────────────────────────
 const WIDE = new Set(['clarificationDetail', 'violationText', 'disciplinaryAction', 'store']);
 const MED  = new Set(['email', 'empId', 'empName', 'QLKV', 'GDV', 'GDVNote', 'disciplinaryGroup', 'Lỗi', 'NOTE', 'Note']);
+const DATE_COLS = new Set(['approvedDate', 'discoveryDate', 'finishedDate']);
+
+const fmtDate = (val) => {
+  if (!val) return '';
+  const m = String(val).trim().match(/^(\d{4})-(\d{2})-(\d{2})/);
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : String(val).trim();
+};
 
 const COLS_1 = [
   ['region',              (r) => r.region],
@@ -132,7 +140,12 @@ const COLS_K = [
 function makeSheet(rows, cols) {
   const data = rows.map((r) => {
     const obj = {};
-    cols.forEach(([h, fn]) => { obj[h] = fn(r) ?? ''; });
+    cols.forEach(([h, fn]) => {
+      let v = fn(r) ?? '';
+      if (typeof v === 'string') v = v.trim();
+      if (DATE_COLS.has(h)) v = fmtDate(v);
+      obj[h] = v;
+    });
     return obj;
   });
   const ws = XLSX.utils.json_to_sheet(data);
@@ -374,7 +387,7 @@ function Nhom1Table({ rows, selected, onToggle, onToggleAll, onEdit }) {
             </Th>
             <Th>KSTT</Th><Th>Tuần</Th><Th>Mã CH</Th><Th>Tên CH</Th>
             <Th>Nhân viên</Th><Th>Chức danh</Th><Th>Nội dung vi phạm</Th>
-            <Th>Giá trị</Th><Th>Thu hồi</Th><Th>Ghi chú</Th>
+            <Th>Giá trị</Th><Th>Thu hồi</Th><Th>Trạng thái</Th>
             <Th />
           </tr>
         </thead>
@@ -553,7 +566,12 @@ const XlvpReport = () => {
 
   // Download
   const handleDownload = () => {
-    buildXlsxBoth(filtered1, filteredK, `TH_XLVP_${startDate}_${endDate}.xlsx`);
+    const byWeekDesc = (a, b) => Number(b.week) - Number(a.week) || String(b.week).localeCompare(String(a.week));
+    buildXlsxBoth(
+      [...filtered1].sort(byWeekDesc),
+      [...filteredK].sort(byWeekDesc),
+      `TH_XLVP_${startDate}_${endDate}.xlsx`,
+    );
   };
 
   // Upload
@@ -643,6 +661,7 @@ const XlvpReport = () => {
             <select name="status" value={q.status} onChange={handleQ}
               className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400">
               <option value="">-- Tất cả --</option>
+              <option value="__blank__">(Trắng)</option>
               {STATUS_OPTS.map((s) => <option key={s} value={s}>{s}</option>)}
             </select>
           </div>

@@ -20,7 +20,8 @@ const TRANG_THAI_COLORS = {
 const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' });
 
 const ViolationDetailModal = ({ data, inspection, onClose, onCreated, onUpdated, onDeleted }) => {
-  const isEmp = data?.user?.role === 'emp';
+  const role = data?.user?.role;
+  const isEmp = role === 'emp';
   const addToast = useStore((s) => s.addToast);
 
   // Load nhomGhiNhan from store if available, else fetch directly
@@ -37,6 +38,9 @@ const ViolationDetailModal = ({ data, inspection, onClose, onCreated, onUpdated,
   // currentId: null = đang tạo mới, có giá trị = đã lưu
   const [currentId, setCurrentId] = useState(inspection?.id || null);
   const isNew = !currentId;
+  const canEdit = isNew || role === 'hod' || role === 'director'
+    || !inspection?.kstt
+    || inspection?.kstt === data?.user?.name;
 
   const [formData, setFormData] = useState(() => {
     if (!inspection?.id) {
@@ -188,21 +192,28 @@ const ViolationDetailModal = ({ data, inspection, onClose, onCreated, onUpdated,
             <h3 className="text-base font-bold text-gray-900">
               {isNew ? 'Ghi nhận mới' : `Chi tiết · ${currentId}`}
             </h3>
-            <button onClick={handleSaveInspection}
-              className="bg-indigo-500 text-white px-3 py-1.5 rounded-md hover:bg-indigo-600 flex items-center gap-1.5 text-xs font-medium cursor-pointer">
-              <Save size={13} /> {isNew ? 'Tạo mới' : 'Lưu'}
-            </button>
+            {canEdit && (
+              <button onClick={handleSaveInspection}
+                className="bg-indigo-500 text-white px-3 py-1.5 rounded-md hover:bg-indigo-600 flex items-center gap-1.5 text-xs font-medium cursor-pointer">
+                <Save size={13} /> {isNew ? 'Tạo mới' : 'Lưu'}
+              </button>
+            )}
             {!isNew && (
               <>
                 <button onClick={handleCreateRecord}
                   className="bg-green-500 text-white px-3 py-1.5 rounded-md hover:bg-green-600 flex items-center gap-1.5 text-xs font-medium cursor-pointer">
                   <Printer size={13} /> Biên bản
                 </button>
-                <button onClick={handleDelete}
-                  className="bg-red-500 text-white px-3 py-1.5 rounded-md hover:bg-red-600 flex items-center gap-1.5 text-xs font-medium cursor-pointer">
-                  <Trash size={13} /> Xóa
-                </button>
+                {canEdit && (
+                  <button onClick={handleDelete}
+                    className="bg-red-500 text-white px-3 py-1.5 rounded-md hover:bg-red-600 flex items-center gap-1.5 text-xs font-medium cursor-pointer">
+                    <Trash size={13} /> Xóa
+                  </button>
+                )}
               </>
+            )}
+            {!canEdit && (
+              <span className="text-xs text-gray-400 italic">Chỉ xem — ghi nhận của KSTT khác</span>
             )}
           </div>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-700 text-2xl leading-none ml-2">&times;</button>
@@ -216,12 +227,15 @@ const ViolationDetailModal = ({ data, inspection, onClose, onCreated, onUpdated,
               <div className="flex gap-1">
                 <input type="text" name="sap" value={formData.sap || ''}
                   onChange={(e) => { handleChange(e); setStoreResults([]); }}
-                  className="flex-1 min-w-0 px-2 py-1.5 border rounded text-sm" />
-                <button type="button" onClick={handleStoreLookup} disabled={storeSearching}
-                  className="shrink-0 px-2 py-1.5 border rounded text-sm bg-gray-50 hover:bg-indigo-50 hover:border-indigo-300 text-gray-600 hover:text-indigo-600 disabled:opacity-50"
-                  title="Tìm cửa hàng">
-                  <Search size={14} className={storeSearching ? 'animate-spin' : ''} />
-                </button>
+                  readOnly={!canEdit}
+                  className={`flex-1 min-w-0 px-2 py-1.5 border rounded text-sm ${!canEdit ? 'bg-gray-50 text-gray-500' : ''}`} />
+                {canEdit && (
+                  <button type="button" onClick={handleStoreLookup} disabled={storeSearching}
+                    className="shrink-0 px-2 py-1.5 border rounded text-sm bg-gray-50 hover:bg-indigo-50 hover:border-indigo-300 text-gray-600 hover:text-indigo-600 disabled:opacity-50"
+                    title="Tìm cửa hàng">
+                    <Search size={14} className={storeSearching ? 'animate-spin' : ''} />
+                  </button>
+                )}
               </div>
               {storeResults.length > 0 && (
                 <div className="absolute z-20 top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg w-72 max-h-52 overflow-y-auto">
@@ -238,12 +252,14 @@ const ViolationDetailModal = ({ data, inspection, onClose, onCreated, onUpdated,
             <div>
               <label className="block text-xs font-medium text-gray-500 mb-1">Tên CH</label>
               <input type="text" name="store" value={formData.store || ''} onChange={handleChange}
-                className="w-full px-2 py-1.5 border rounded text-sm" />
+                readOnly={!canEdit}
+                className={`w-full px-2 py-1.5 border rounded text-sm ${!canEdit ? 'bg-gray-50 text-gray-500' : ''}`} />
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-500 mb-1">Chuỗi</label>
               <select name="chain" value={formData.chain || ''} onChange={handleChange}
-                className="w-full px-2 py-1.5 border rounded text-sm bg-white">
+                disabled={!canEdit}
+                className={`w-full px-2 py-1.5 border rounded text-sm bg-white ${!canEdit ? 'opacity-60 cursor-not-allowed' : ''}`}>
                 <option value="">-- Chọn --</option>
                 {CHAIN_OPTIONS.map((o) => <option key={o}>{o}</option>)}
               </select>
@@ -251,28 +267,32 @@ const ViolationDetailModal = ({ data, inspection, onClose, onCreated, onUpdated,
             <div>
               <label className="block text-xs font-medium text-gray-500 mb-1">Ngày kiểm tra <span className="text-red-500">*</span></label>
               <input type="date" name="ngayKiemTra" value={formData.ngayKiemTra || ''} onChange={handleChange}
-                className="w-full px-2 py-1.5 border rounded text-sm" />
+                readOnly={!canEdit}
+                className={`w-full px-2 py-1.5 border rounded text-sm ${!canEdit ? 'bg-gray-50 text-gray-500' : ''}`} />
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-500 mb-1">QLKV</label>
               <input type="text" name="qlkv" value={formData.qlkv || ''} onChange={handleChange}
-                className="w-full px-2 py-1.5 border rounded text-sm" />
+                readOnly={!canEdit}
+                className={`w-full px-2 py-1.5 border rounded text-sm ${!canEdit ? 'bg-gray-50 text-gray-500' : ''}`} />
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-500 mb-1">GĐV</label>
               <input type="text" name="gdv" value={formData.gdv || ''} onChange={handleChange}
-                className="w-full px-2 py-1.5 border rounded text-sm" />
+                readOnly={!canEdit}
+                className={`w-full px-2 py-1.5 border rounded text-sm ${!canEdit ? 'bg-gray-50 text-gray-500' : ''}`} />
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-500 mb-1">Nhân sự phụ trách</label>
               <input type="text" name="kstt" value={formData.kstt || ''} onChange={handleChange}
-                readOnly={isEmp}
-                className={`w-full px-2 py-1.5 border rounded text-sm ${isEmp ? 'bg-gray-50 text-gray-500 cursor-not-allowed' : ''}`} />
+                readOnly={isEmp || !canEdit}
+                className={`w-full px-2 py-1.5 border rounded text-sm ${(isEmp || !canEdit) ? 'bg-gray-50 text-gray-500 cursor-not-allowed' : ''}`} />
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-500 mb-1">Ghi nhận thu tin</label>
               <textarea name="thuTin" value={formData.thuTin || ''} onChange={handleChange}
-                rows={2} className="w-full px-2 py-1.5 border rounded text-sm resize-none"
+                readOnly={!canEdit}
+                rows={2} className={`w-full px-2 py-1.5 border rounded text-sm resize-none ${!canEdit ? 'bg-gray-50 text-gray-500' : ''}`}
                 placeholder="Ghi nhận thu thập thông tin..." />
             </div>
           </div>
@@ -291,10 +311,12 @@ const ViolationDetailModal = ({ data, inspection, onClose, onCreated, onUpdated,
                 <h4 className="text-sm font-semibold text-gray-800">
                   Vi phạm <span className="text-gray-400 font-normal">({violations.length})</span>
                 </h4>
-                <button onClick={() => setItemModal({ open: true, item: null })}
-                  className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-indigo-600 text-white text-xs rounded-md hover:bg-indigo-700">
-                  <Plus size={12} /> Thêm vi phạm
-                </button>
+                {canEdit && (
+                  <button onClick={() => setItemModal({ open: true, item: null })}
+                    className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-indigo-600 text-white text-xs rounded-md hover:bg-indigo-700">
+                    <Plus size={12} /> Thêm vi phạm
+                  </button>
+                )}
               </div>
 
               {loadingVio ? (
@@ -342,16 +364,18 @@ const ViolationDetailModal = ({ data, inspection, onClose, onCreated, onUpdated,
                             <p className="line-clamp-2">{v.xlvp}</p>
                           </td>
                           <td className="px-3 py-2 align-top">
-                            <div className="flex items-center gap-1">
-                              <button onClick={() => setItemModal({ open: true, item: v })}
-                                className="p-1 text-indigo-600 hover:bg-indigo-50 rounded">
-                                <Pencil size={12} />
-                              </button>
-                              <button onClick={() => handleDeleteItem(v.id)}
-                                className="p-1 text-red-500 hover:bg-red-50 rounded">
-                                <Trash2 size={12} />
-                              </button>
-                            </div>
+                            {canEdit && (
+                              <div className="flex items-center gap-1">
+                                <button onClick={() => setItemModal({ open: true, item: v })}
+                                  className="p-1 text-indigo-600 hover:bg-indigo-50 rounded">
+                                  <Pencil size={12} />
+                                </button>
+                                <button onClick={() => handleDeleteItem(v.id)}
+                                  className="p-1 text-red-500 hover:bg-red-50 rounded">
+                                  <Trash2 size={12} />
+                                </button>
+                              </div>
+                            )}
                           </td>
                         </tr>
                       ))}
