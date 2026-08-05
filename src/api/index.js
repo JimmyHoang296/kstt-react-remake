@@ -490,7 +490,6 @@ export const api = {
         store_name:  toStr(r.store_name),
         lat:         toNum(r.lat),
         long:        toNum(r.long),
-        address:     toStr(r.address),
         cht:         toStr(r.cht),
         sdt_cht:     toNum(r.sdt_cht),
         qlkv:        toStr(r.qlkv),
@@ -503,7 +502,6 @@ export const api = {
         gdc_id:      toStr(r.gdc_id),
         gdc:         toStr(r.gdc),
         kstt:        toStr(r.kstt),
-        chuoi:       toStr(r.chuoi),
       }))
       .filter((r) => r.store);
 

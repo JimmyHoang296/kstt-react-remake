@@ -570,7 +570,7 @@ function SetupEditor() {
 
 // ─── Import dữ liệu ───────────────────────────────────────────────────────────
 
-const STORE_COLS = ['store','address','store_name','lat','long','cht','sdt_cht','qlkv','sdt_qlkv','qlkv_id','gdv','gdv_id','gdm','gdm_id','gdc','gdc_id','kstt','chuoi'];
+const STORE_COLS = ['store','store_name','lat','long','cht','sdt_cht','qlkv','sdt_qlkv','qlkv_id','gdv','gdv_id','gdm','gdm_id','gdc','gdc_id','kstt'];
 
 function ImportEditor() {
   const addToast = useStore((s) => s.addToast);
