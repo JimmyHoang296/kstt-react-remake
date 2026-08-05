@@ -570,7 +570,7 @@ function SetupEditor() {
 
 // ─── Import dữ liệu ───────────────────────────────────────────────────────────
 
-const STORE_COLS = ['store','store_name','lat','long','address','CHT','SDT CHT','QLKV','SDT QLKV','QLKV id','GDV id','GDV','GDM id','GDM','GDC id','GDC','kstt','chuoi'];
+const STORE_COLS = ['store','address','store_name','lat','long','cht','sdt_cht','qlkv','sdt_qlkv','qlkv_id','gdv','gdv_id','gdm','gdm_id','gdc','gdc_id','kstt','chuoi'];
 
 function ImportEditor() {
   const addToast = useStore((s) => s.addToast);
@@ -671,7 +671,7 @@ function ImportEditor() {
             <table className="min-w-full text-xs">
               <thead className="bg-gray-50 sticky top-0">
                 <tr>
-                  {['store','store_name','chuoi','QLKV','GDV','kstt'].map((h) => (
+                  {['store','store_name','chuoi','qlkv','gdv','kstt'].map((h) => (
                     <th key={h} className="px-3 py-2 text-left font-semibold text-gray-500 uppercase whitespace-nowrap">{h}</th>
                   ))}
                   <th className="px-3 py-2 text-left font-semibold text-gray-500 uppercase">...</th>
@@ -683,8 +683,8 @@ function ImportEditor() {
                     <td className="px-3 py-1.5 font-mono text-gray-700">{r.store}</td>
                     <td className="px-3 py-1.5 text-gray-600">{r.store_name}</td>
                     <td className="px-3 py-1.5 text-gray-600">{r.chuoi}</td>
-                    <td className="px-3 py-1.5 text-gray-600">{r.QLKV}</td>
-                    <td className="px-3 py-1.5 text-gray-600">{r.GDV}</td>
+                    <td className="px-3 py-1.5 text-gray-600">{r.qlkv}</td>
+                    <td className="px-3 py-1.5 text-gray-600">{r.gdv}</td>
                     <td className="px-3 py-1.5 text-gray-600">{r.kstt}</td>
                     <td className="px-3 py-1.5 text-gray-400">...</td>
                   </tr>
