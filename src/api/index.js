@@ -126,18 +126,33 @@ async function getData(u) {
     return q;
   };
 
+  // Pre-fetch team members for hod so the inspection query can use kstt filter
+  // (same logic as ViolationReport). empRes in the main batch covers the same
+  // data but is fetched in parallel and cannot be used there directly.
+  let hodEmpNames = [];
+  if (user.role === 'hod' && !user.leadGhiNhan && user.hod) {
+    const { data: preEmpData } = await supabase.from('app_user').select('name').eq('hod', user.hod);
+    hodEmpNames = (preEmpData || []).map((r) => r.name).filter(Boolean);
+  }
+
+  const makeInspections = () => {
+    let q = supabase.from('inspections').select('*');
+    if (!user.leadGhiNhan) {
+      if (user.role === 'emp') {
+        q = q.ilike('kstt', user.name);
+      } else if (user.role === 'hod') {
+        const ksttList = [...new Set([user.name, ...hodEmpNames])];
+        q = q.in('kstt', ksttList);
+      } else {
+        q = q.ilike('user', user.id);
+      }
+    }
+    return q;
+  };
+
   const [cases, inspections, calendar, visitPlan, empRes, setupRes, nhomRes] = await Promise.all([
     fetchAllRows(makeCases),
-    fetchAllRows(() => {
-      let q = supabase.from('inspections').select('*');
-      if (!user.leadGhiNhan) {
-        // Filter by kstt (assignee) to match ViolationReport logic,
-        // so records created by others but assigned to this emp are also included.
-        if (user.role === 'emp') q = q.ilike('kstt', user.name);
-        else q = q.ilike('user', user.id);
-      }
-      return q;
-    }),
+    fetchAllRows(makeInspections),
     fetchAllRows(() => supabase.from('calendar').select('*').ilike('user', user.id)),
     fetchAllRows(() => supabase.from('visit_plan').select('*').ilike('user', user.id).gte('date', today)),
     supabase.from('app_user').select('name').eq('hod', user.hod),
