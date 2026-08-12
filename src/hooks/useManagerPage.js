@@ -54,6 +54,7 @@ export function useManagerPage({ initialItems, initialSearch, filterFn, pageSize
     items,
     setItems,
     searchQuery,
+    setSearchQuery,
     filteredItems,
     currentPage,
     setCurrentPage,

@@ -9,10 +9,23 @@ import ViolationDetailModal from "./ViolationDetailModal";
 
 const INPUT = "border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent";
 
+const todayStr       = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' });
+const thisMonthStart = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`; };
+const prevMonth      = () => {
+  const d = new Date();
+  const first = new Date(d.getFullYear(), d.getMonth() - 1, 1);
+  const last  = new Date(d.getFullYear(), d.getMonth(), 0);
+  const fmt = (x) => x.toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' });
+  return { start: fmt(first), end: fmt(last) };
+};
+const daysAgo = (n) => { const d = new Date(); d.setDate(d.getDate() - n); return d.toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' }); };
+
 const filterFn = (item, q) =>
-  (!q.sap   || item.sap?.toLowerCase().includes(q.sap.toLowerCase())) &&
-  (!q.store || item.store?.toLowerCase().includes(q.store.toLowerCase())) &&
-  (!q.kstt  || item.kstt?.toLowerCase().includes(q.kstt.toLowerCase()));
+  (!q.sap      || item.sap?.toLowerCase().includes(q.sap.toLowerCase()))   &&
+  (!q.store    || item.store?.toLowerCase().includes(q.store.toLowerCase())) &&
+  (!q.kstt     || item.kstt?.toLowerCase().includes(q.kstt.toLowerCase()))  &&
+  (!q.dateFrom || (item.ngayKiemTra || '') >= q.dateFrom)                   &&
+  (!q.dateTo   || (item.ngayKiemTra || '') <= q.dateTo);
 
 const SortIcon = ({ field, sortField, sortDir }) => {
   if (sortField !== field) return <ChevronsUpDown className="w-3 h-3 inline ml-1 opacity-40" />;
@@ -31,7 +44,7 @@ const ViolationManager = () => {
 
   const {
     items: inspections, setItems: setInspections,
-    searchQuery, filteredItems,
+    searchQuery, setSearchQuery, filteredItems,
     currentPage, setCurrentPage,
     isModalOpen, selectedItem: selectedInspection,
     loading, setLoading,
@@ -39,9 +52,21 @@ const ViolationManager = () => {
     openModal, closeModal,
   } = useManagerPage({
     initialItems: data.inspections || [],
-    initialSearch: { sap: '', store: '', kstt: defaultKstt },
+    initialSearch: { sap: '', store: '', kstt: defaultKstt, dateFrom: thisMonthStart(), dateTo: todayStr() },
     filterFn,
   });
+
+  const setDateRange = (from, to) => {
+    setSearchQuery((q) => ({ ...q, dateFrom: from, dateTo: to }));
+    setCurrentPage(1);
+  };
+
+  const quickBtns = [
+    { label: 'Tháng này',   action: () => setDateRange(thisMonthStart(), todayStr()) },
+    { label: 'Tháng trước', action: () => { const pm = prevMonth(); setDateRange(pm.start, pm.end); } },
+    { label: '30 ngày',     action: () => setDateRange(daysAgo(30), todayStr()) },
+    { label: 'Tất cả',      action: () => setDateRange('', '') },
+  ];
 
   const [sortField, setSortField] = useState('ngayKiemTra');
   const [sortDir,   setSortDir]   = useState('desc');
@@ -93,8 +118,29 @@ const ViolationManager = () => {
         </button>
       </div>
 
+      {/* Date filter */}
+      <div className="px-6 py-3 border-b border-gray-100 bg-gray-50">
+        <div className="flex flex-wrap gap-3 items-end">
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">Từ ngày</label>
+            <input type="date" name="dateFrom" value={searchQuery.dateFrom} onChange={handleSearchChange} className={INPUT} />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">Đến ngày</label>
+            <input type="date" name="dateTo" value={searchQuery.dateTo} onChange={handleSearchChange} className={INPUT} />
+          </div>
+          <div className="flex gap-2 flex-wrap">
+            {quickBtns.map(({ label, action }) => (
+              <button key={label} onClick={action} className="px-3 py-2 text-sm border border-gray-200 rounded-lg text-gray-600 hover:bg-white bg-white transition-colors">
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
       {/* Search */}
-      <div className="px-6 py-4 border-b border-gray-100 bg-gray-50">
+      <div className="px-6 py-3 border-b border-gray-100">
         <div className="flex flex-wrap gap-3 items-end">
           <div className="flex-1 min-w-[160px]">
             <label className="block text-xs font-medium text-gray-500 mb-1">Mã CH</label>
