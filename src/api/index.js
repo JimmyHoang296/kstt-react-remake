@@ -130,7 +130,12 @@ async function getData(u) {
     fetchAllRows(makeCases),
     fetchAllRows(() => {
       let q = supabase.from('inspections').select('*');
-      if (!user.leadGhiNhan) q = q.ilike('user', user.id);
+      if (!user.leadGhiNhan) {
+        // Filter by kstt (assignee) to match ViolationReport logic,
+        // so records created by others but assigned to this emp are also included.
+        if (user.role === 'emp') q = q.ilike('kstt', user.name);
+        else q = q.ilike('user', user.id);
+      }
       return q;
     }),
     fetchAllRows(() => supabase.from('calendar').select('*').ilike('user', user.id)),
