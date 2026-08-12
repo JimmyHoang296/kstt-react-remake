@@ -1,5 +1,5 @@
-import React, { useEffect } from "react";
-import { Eye, FileText, Plus } from "lucide-react";
+import React, { useEffect, useMemo, useState } from "react";
+import { ChevronDown, ChevronUp, ChevronsUpDown, Eye, FileText, Plus } from "lucide-react";
 import { api } from "../../api";
 import { useManagerPage } from "../../hooks/useManagerPage";
 import useStore from "../../store/useStore";
@@ -14,6 +14,13 @@ const filterFn = (item, q) =>
   (!q.store || item.store?.toLowerCase().includes(q.store.toLowerCase())) &&
   (!q.kstt  || item.kstt?.toLowerCase().includes(q.kstt.toLowerCase()));
 
+const SortIcon = ({ field, sortField, sortDir }) => {
+  if (sortField !== field) return <ChevronsUpDown className="w-3 h-3 inline ml-1 opacity-40" />;
+  return sortDir === 'asc'
+    ? <ChevronUp   className="w-3 h-3 inline ml-1" />
+    : <ChevronDown className="w-3 h-3 inline ml-1" />;
+};
+
 const ViolationManager = () => {
   const data     = useStore((state) => state.data);
   const setData  = useStore((state) => state.setData);
@@ -24,11 +31,10 @@ const ViolationManager = () => {
 
   const {
     items: inspections, setItems: setInspections,
-    searchQuery,
+    searchQuery, filteredItems,
     currentPage, setCurrentPage,
     isModalOpen, selectedItem: selectedInspection,
     loading, setLoading,
-    paginatedItems, totalPages,
     handleSearchChange, resetSearch,
     openModal, closeModal,
   } = useManagerPage({
@@ -36,6 +42,36 @@ const ViolationManager = () => {
     initialSearch: { sap: '', store: '', kstt: defaultKstt },
     filterFn,
   });
+
+  const [sortField, setSortField] = useState('ngayKiemTra');
+  const [sortDir,   setSortDir]   = useState('desc');
+  const PER_PAGE = 20;
+
+  const handleSort = (field) => {
+    if (sortField === field) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    else { setSortField(field); setSortDir('asc'); }
+    setCurrentPage(1);
+  };
+
+  const sortedPaginatedItems = useMemo(() => {
+    const sorted = [...filteredItems].sort((a, b) => {
+      const vA = a[sortField] ?? '', vB = b[sortField] ?? '';
+      const cmp = typeof vA === 'number' ? vA - vB : String(vA).localeCompare(String(vB), 'vi');
+      return sortDir === 'asc' ? cmp : -cmp;
+    });
+    const start = (currentPage - 1) * PER_PAGE;
+    return sorted.slice(start, start + PER_PAGE);
+  }, [filteredItems, sortField, sortDir, currentPage]);
+
+  const totalPages = Math.ceil(filteredItems.length / PER_PAGE);
+
+  const COLS = [
+    { label: 'Mã',      field: 'id'           },
+    { label: 'Mã CH',   field: 'sap'          },
+    { label: 'Tên CH',  field: 'store'        },
+    { label: 'Ngày KT', field: 'ngayKiemTra'  },
+    { label: 'KSTT',    field: 'kstt'         },
+  ];
 
   useEffect(() => { setData((prev) => ({ ...prev, inspections })); }, [inspections]);
 
@@ -81,12 +117,12 @@ const ViolationManager = () => {
       {/* Result count */}
       <div className="px-6 pt-3 pb-1">
         <p className="text-xs text-gray-400">
-          Hiển thị <span className="font-medium text-gray-600">{paginatedItems.length}</span> / <span className="font-medium text-gray-600">{inspections.length}</span> ghi nhận
+          Hiển thị <span className="font-medium text-gray-600">{sortedPaginatedItems.length}</span> / <span className="font-medium text-gray-600">{filteredItems.length}</span> ghi nhận
         </p>
       </div>
 
       {/* Table */}
-      {paginatedItems.length === 0 ? (
+      {filteredItems.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-gray-400">
           <FileText className="w-10 h-10 mb-3 opacity-40" />
           <p className="text-sm">Không có ghi nhận nào</p>
@@ -97,16 +133,16 @@ const ViolationManager = () => {
             <table className="min-w-full">
               <thead className="bg-gray-50 border-y border-gray-100">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Mã</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Mã CH</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Tên CH</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Ngày KT</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">KSTT</th>
+                  {COLS.map(({ label, field }) => (
+                    <th key={field} onClick={() => handleSort(field)} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none">
+                      {label} <SortIcon field={field} sortField={sortField} sortDir={sortDir} />
+                    </th>
+                  ))}
                   <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Chi tiết</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {paginatedItems.map((item) => (
+                {sortedPaginatedItems.map((item) => (
                   <tr key={item.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-4 py-3 text-sm text-gray-500 font-mono">{item.id}</td>
                     <td className="px-4 py-3 text-sm text-gray-700 font-medium">{item.sap}</td>
@@ -126,7 +162,7 @@ const ViolationManager = () => {
 
           {/* Mobile cards */}
           <div className="block md:hidden divide-y divide-gray-100">
-            {paginatedItems.map((item) => (
+            {sortedPaginatedItems.map((item) => (
               <div key={item.id} className="px-4 py-4 space-y-1.5">
                 <div className="flex items-start justify-between gap-2">
                   <div>

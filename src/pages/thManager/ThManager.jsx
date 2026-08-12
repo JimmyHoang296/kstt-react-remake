@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { FileText, Search, X } from 'lucide-react';
+import { ChevronDown, ChevronUp, ChevronsUpDown, FileText, Search, X } from 'lucide-react';
 import { api } from '../../api';
 import useStore from '../../store/useStore';
 import Pagination from '../../components/Pagination';
@@ -54,17 +54,23 @@ function usePaged(rows, page) {
 }
 
 // ─── Nhóm 1 Table ─────────────────────────────────────────────────────────────
-function Nhom1Table({ rows, showKstt }) {
+function Nhom1Table({ rows, showKstt, sort, onSort }) {
   if (rows.length === 0) return <Empty />;
   return (
     <div className="overflow-x-auto">
       <table className="min-w-full text-sm">
         <thead className="bg-gray-50 border-y border-gray-100">
           <tr>
-            {showKstt && <Th>KSTT</Th>}
-            <Th>Tuần</Th><Th>Mã CH</Th><Th>Tên CH</Th>
-            <Th>Nhân viên</Th><Th>Chức danh</Th><Th>Nội dung vi phạm</Th>
-            <Th>Giá trị</Th><Th>Thu hồi</Th><Th>Ghi chú</Th>
+            {showKstt && <Th field="kstt_submitted" sort={sort} onSort={onSort}>KSTT</Th>}
+            <Th field="week" sort={sort} onSort={onSort}>Tuần</Th>
+            <Th field="sap" sort={sort} onSort={onSort}>Mã CH</Th>
+            <Th field="store" sort={sort} onSort={onSort}>Tên CH</Th>
+            <Th field="emp_name" sort={sort} onSort={onSort}>Nhân viên</Th>
+            <Th field="emp_title" sort={sort} onSort={onSort}>Chức danh</Th>
+            <Th field="violation_text" sort={sort} onSort={onSort}>Nội dung vi phạm</Th>
+            <Th field="loss_value" sort={sort} onSort={onSort}>Giá trị</Th>
+            <Th field="recover_value" sort={sort} onSort={onSort}>Thu hồi</Th>
+            <Th field="Note" sort={sort} onSort={onSort}>Ghi chú</Th>
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-100">
@@ -93,17 +99,23 @@ function Nhom1Table({ rows, showKstt }) {
 }
 
 // ─── Nhóm Khác Table ──────────────────────────────────────────────────────────
-function NhomKhacTable({ rows, showKstt }) {
+function NhomKhacTable({ rows, showKstt, sort, onSort }) {
   if (rows.length === 0) return <Empty />;
   return (
     <div className="overflow-x-auto">
       <table className="min-w-full text-sm">
         <thead className="bg-gray-50 border-y border-gray-100">
           <tr>
-            {showKstt && <Th>KSTT</Th>}
-            <Th>Tuần</Th><Th>Mã CH</Th><Th>Tên CH</Th>
-            <Th>Nhân viên</Th><Th>Chức danh</Th><Th>Nội dung vi phạm</Th>
-            <Th>Hình thức XLVP</Th><Th>Trạng thái</Th><Th>Ghi chú</Th>
+            {showKstt && <Th field="kstt_submitted" sort={sort} onSort={onSort}>KSTT</Th>}
+            <Th field="week" sort={sort} onSort={onSort}>Tuần</Th>
+            <Th field="sap" sort={sort} onSort={onSort}>Mã CH</Th>
+            <Th field="store" sort={sort} onSort={onSort}>Tên CH</Th>
+            <Th field="emp_name" sort={sort} onSort={onSort}>Nhân viên</Th>
+            <Th field="emp_title" sort={sort} onSort={onSort}>Chức danh</Th>
+            <Th field="violation_text" sort={sort} onSort={onSort}>Nội dung vi phạm</Th>
+            <Th field="disciplinary_action" sort={sort} onSort={onSort}>Hình thức XLVP</Th>
+            <Th field="status" sort={sort} onSort={onSort}>Trạng thái</Th>
+            <Th field="NOTE" sort={sort} onSort={onSort}>Ghi chú</Th>
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-100">
@@ -132,9 +144,24 @@ function NhomKhacTable({ rows, showKstt }) {
 }
 
 // ─── Shared primitives ─────────────────────────────────────────────────────────
-const Th = ({ children }) => (
-  <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">{children}</th>
-);
+const Th = ({ children, field, sort, onSort }) => {
+  const active = sort && field && sort.field === field;
+  return (
+    <th
+      className={`px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap ${field && onSort ? 'cursor-pointer hover:bg-gray-100 select-none' : ''}`}
+      onClick={field && onSort ? () => onSort(field) : undefined}
+    >
+      {children}
+      {field && onSort && (
+        active
+          ? sort.dir === 'asc'
+            ? <ChevronUp className="w-3 h-3 inline ml-1" />
+            : <ChevronDown className="w-3 h-3 inline ml-1" />
+          : <ChevronsUpDown className="w-3 h-3 inline ml-1 opacity-40" />
+      )}
+    </th>
+  );
+};
 const Td = ({ children, className = '' }) => (
   <td className={`px-3 py-2.5 text-xs text-gray-700 align-top ${className}`}>{children}</td>
 );
@@ -165,6 +192,26 @@ const ThManager = () => {
   const [q, setQ] = useState({ week: '', search: '' });
   const [page1, setPage1] = useState(1);
   const [pageK, setPageK] = useState(1);
+  const [sort1, setSort1] = useState({ field: 'week', dir: 'desc' });
+  const [sortK, setSortK] = useState({ field: 'week', dir: 'desc' });
+
+  const handleSort1 = (field) => {
+    setSort1((s) => ({ field, dir: s.field === field ? (s.dir === 'asc' ? 'desc' : 'asc') : 'asc' }));
+    setPage1(1);
+  };
+  const handleSortK = (field) => {
+    setSortK((s) => ({ field, dir: s.field === field ? (s.dir === 'asc' ? 'desc' : 'asc') : 'asc' }));
+    setPageK(1);
+  };
+
+  const applySort = (rows, sort) => {
+    if (!sort.field) return rows;
+    return [...rows].sort((a, b) => {
+      const vA = a[sort.field] ?? '', vB = b[sort.field] ?? '';
+      const cmp = typeof vA === 'number' && typeof vB === 'number' ? vA - vB : String(vA).localeCompare(String(vB), 'vi');
+      return sort.dir === 'asc' ? cmp : -cmp;
+    });
+  };
 
   const fetchData = (s = startDate, e = endDate) => {
     const params = { role, userName, emps, startDate: s, endDate: e };
@@ -200,8 +247,8 @@ const ThManager = () => {
 
   const filtered1 = useFilter(rows1, q);
   const filteredK = useFilter(rowsKhac, q);
-  const { paged: paged1, total: total1 } = usePaged(filtered1, page1);
-  const { paged: pagedK, total: totalK } = usePaged(filteredK, pageK);
+  const { paged: paged1, total: total1 } = usePaged(applySort(filtered1, sort1), page1);
+  const { paged: pagedK, total: totalK } = usePaged(applySort(filteredK, sortK), pageK);
 
   const tabs = [
     { key: 'nhom1', label: 'Nhóm 1',    count: filtered1.length },
@@ -297,7 +344,7 @@ const ThManager = () => {
                   Hiển thị <span className="font-medium text-gray-600">{paged1.length}</span> / <span className="font-medium text-gray-600">{filtered1.length}</span> bản ghi
                 </p>
               </div>
-              <Nhom1Table rows={paged1} showKstt={showKstt} />
+              <Nhom1Table rows={paged1} showKstt={showKstt} sort={sort1} onSort={handleSort1} />
               <div className="px-6 pt-3">
                 <Pagination totalPages={total1} currentPage={page1} setCurrentPage={setPage1} />
               </div>
@@ -309,7 +356,7 @@ const ThManager = () => {
                   Hiển thị <span className="font-medium text-gray-600">{pagedK.length}</span> / <span className="font-medium text-gray-600">{filteredK.length}</span> bản ghi
                 </p>
               </div>
-              <NhomKhacTable rows={pagedK} showKstt={showKstt} />
+              <NhomKhacTable rows={pagedK} showKstt={showKstt} sort={sortK} onSort={handleSortK} />
               <div className="px-6 pt-3">
                 <Pagination totalPages={totalK} currentPage={pageK} setCurrentPage={setPageK} />
               </div>

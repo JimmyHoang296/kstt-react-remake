@@ -1,5 +1,5 @@
-import React, { useEffect } from "react";
-import { Eye, Plus, CalendarDays } from "lucide-react";
+import React, { useEffect, useMemo, useState } from "react";
+import { ChevronDown, ChevronUp, ChevronsUpDown, Eye, Plus, CalendarDays } from "lucide-react";
 import { getTodayDateString, toDateInputValue } from "../../assets/helpers";
 import { api } from "../../api";
 import { useManagerPage } from "../../hooks/useManagerPage";
@@ -27,6 +27,13 @@ const planFilterFn = (p, q) =>
   (!q.site   || p.site?.toLowerCase().includes(q.site.toLowerCase()))   &&
   (!q.status || p.status?.toLowerCase().includes(q.status.toLowerCase()));
 
+const SortIcon = ({ field, sortField, sortDir }) => {
+  if (sortField !== field) return <ChevronsUpDown className="w-3 h-3 inline ml-1 opacity-40" />;
+  return sortDir === 'asc'
+    ? <ChevronUp   className="w-3 h-3 inline ml-1" />
+    : <ChevronDown className="w-3 h-3 inline ml-1" />;
+};
+
 const VisitPlanManager = () => {
   const data     = useStore((state) => state.data);
   const setData  = useStore((state) => state.setData);
@@ -34,11 +41,10 @@ const VisitPlanManager = () => {
 
   const {
     items: plans, setItems: setPlans,
-    searchQuery,
+    searchQuery, filteredItems,
     currentPage, setCurrentPage,
     isModalOpen, selectedItem: selectedPlan,
     loading, setLoading,
-    paginatedItems: paginatedPlans, totalPages,
     handleSearchChange, resetSearch,
     openModal, closeModal,
   } = useManagerPage({
@@ -46,6 +52,35 @@ const VisitPlanManager = () => {
     initialSearch: { site: '', status: '' },
     filterFn: planFilterFn,
   });
+
+  const [sortField, setSortField] = useState('date');
+  const [sortDir,   setSortDir]   = useState('desc');
+  const PER_PAGE = 20;
+
+  const handleSort = (field) => {
+    if (sortField === field) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    else { setSortField(field); setSortDir('asc'); }
+    setCurrentPage(1);
+  };
+
+  const paginatedPlans = useMemo(() => {
+    const sorted = [...filteredItems].sort((a, b) => {
+      const vA = a[sortField] ?? '', vB = b[sortField] ?? '';
+      const cmp = typeof vA === 'number' ? vA - vB : String(vA).localeCompare(String(vB), 'vi');
+      return sortDir === 'asc' ? cmp : -cmp;
+    });
+    const start = (currentPage - 1) * PER_PAGE;
+    return sorted.slice(start, start + PER_PAGE);
+  }, [filteredItems, sortField, sortDir, currentPage]);
+
+  const totalPages = Math.ceil(filteredItems.length / PER_PAGE);
+
+  const COLS = [
+    { label: 'Ngày',      field: 'date'   },
+    { label: 'Site',      field: 'site'   },
+    { label: 'Path',      field: 'path'   },
+    { label: 'Trạng thái',field: 'status' },
+  ];
 
   useEffect(() => { setData((prev) => ({ ...prev, visitPlan: plans })); }, [plans]);
 
@@ -114,12 +149,12 @@ const VisitPlanManager = () => {
       {/* Result count */}
       <div className="px-6 pt-3 pb-1">
         <p className="text-xs text-gray-400">
-          Hiển thị <span className="font-medium text-gray-600">{paginatedPlans.length}</span> / <span className="font-medium text-gray-600">{plans.length}</span> kế hoạch
+          Hiển thị <span className="font-medium text-gray-600">{paginatedPlans.length}</span> / <span className="font-medium text-gray-600">{filteredItems.length}</span> kế hoạch
         </p>
       </div>
 
       {/* Table */}
-      {paginatedPlans.length === 0 ? (
+      {filteredItems.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-gray-400">
           <CalendarDays className="w-10 h-10 mb-3 opacity-40" />
           <p className="text-sm">Không có kế hoạch nào</p>
@@ -130,10 +165,11 @@ const VisitPlanManager = () => {
             <table className="min-w-full">
               <thead className="bg-gray-50 border-y border-gray-100">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Ngày</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Site</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Path</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Trạng thái</th>
+                  {COLS.map(({ label, field }) => (
+                    <th key={field} onClick={() => handleSort(field)} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none">
+                      {label} <SortIcon field={field} sortField={sortField} sortDir={sortDir} />
+                    </th>
+                  ))}
                   <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Chi tiết</th>
                 </tr>
               </thead>
