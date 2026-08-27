@@ -456,11 +456,9 @@ function InspectionRow({ insp, showKstt }) {
           )}
         </td>
         <td className="px-3 py-2.5">
-          {insp.trang_thai && (
-            <span className={`text-xs px-2 py-0.5 rounded-full font-medium whitespace-nowrap ${INSPECTION_TRANG_THAI_COLOR[insp.trang_thai] || 'bg-gray-100 text-gray-600'}`}>
-              {insp.trang_thai}
-            </span>
-          )}
+          <span className={`text-xs px-2 py-0.5 rounded-full font-medium whitespace-nowrap ${INSPECTION_TRANG_THAI_COLOR[insp.trang_thai] || 'bg-purple-100 text-purple-700'}`}>
+            {insp.trang_thai || 'Đang làm rõ'}
+          </span>
         </td>
       </tr>
 

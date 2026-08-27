@@ -57,8 +57,12 @@ const ViolationDetailModal = ({ data, inspection, onClose, onCreated, onUpdated,
         trang_thai: 'Đang làm rõ',
       };
     }
-    // map batCapVH → thuTin for existing records
-    return { ...inspection, thuTin: inspection.thuTin ?? inspection.batCapVH ?? '' };
+    // map batCapVH → thuTin for existing records; default trang_thai for old records
+    return {
+      ...inspection,
+      thuTin: inspection.thuTin ?? inspection.batCapVH ?? '',
+      trang_thai: inspection.trang_thai ?? 'Đang làm rõ',
+    };
   });
 
   const [violations, setViolations] = useState([]);

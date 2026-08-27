@@ -212,11 +212,9 @@ const ViolationManager = () => {
                     <td className="px-4 py-3 text-sm text-gray-500">{item.ngayKiemTra}</td>
                     <td className="px-4 py-3 text-sm text-gray-500">{item.kstt}</td>
                     <td className="px-4 py-3">
-                      {item.trang_thai && (
-                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${TRANG_THAI_BADGE[item.trang_thai] || 'bg-gray-100 text-gray-600'}`}>
-                          {item.trang_thai}
-                        </span>
-                      )}
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${TRANG_THAI_BADGE[item.trang_thai] || 'bg-purple-100 text-purple-700'}`}>
+                        {item.trang_thai || 'Đang làm rõ'}
+                      </span>
                     </td>
                     <td className="px-4 py-3 text-center">
                       <button onClick={() => openModal(item)} className="p-1.5 rounded-lg text-indigo-600 hover:bg-indigo-50 transition-colors">

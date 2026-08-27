@@ -40,7 +40,7 @@ const CASE_CFG = {
 };
 
 const INSPECTION_CFG = {
-  cols: ['id', 'user', 'kstt', 'sap', 'store', 'qlkv', 'gdv', 'chain', 'ngayKiemTra', 'batCapVH'],
+  cols: ['id', 'user', 'kstt', 'sap', 'store', 'qlkv', 'gdv', 'chain', 'ngayKiemTra', 'batCapVH', 'trang_thai'],
   dates: ['ngayKiemTra'],
 };
 
