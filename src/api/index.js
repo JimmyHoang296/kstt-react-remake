@@ -426,14 +426,22 @@ export const api = {
     return error ? { success: false, message: error.message } : { success: true };
   },
 
-  // ---- Store History (inspections + violations for a specific SAP) ----
+  // ---- Store History (inspections + violations + xlvp for a specific SAP) ----
   getStoreHistory: async (sap) => {
-    const { data, error } = await supabase
-      .from('inspections')
-      .select('*, violations(*)')
-      .ilike('sap', sap)
-      .order('ngayKiemTra', { ascending: false });
-    return error ? { success: false, message: error.message } : { success: true, data: data || [] };
+    const [inspRes, nhom1Res, nhomKhacRes] = await Promise.all([
+      supabase.from('inspections').select('*, violations(*)').ilike('sap', sap).order('ngayKiemTra', { ascending: false }),
+      supabase.from('th_nhom_1').select('*').ilike('sap', sap).order('finished_date', { ascending: false }),
+      supabase.from('th_nhom_khac').select('*').ilike('sap', sap).order('approved_date', { ascending: false }),
+    ]);
+    if (inspRes.error) return { success: false, message: inspRes.error.message };
+    return {
+      success: true,
+      data: {
+        inspections: inspRes.data || [],
+        nhom1: nhom1Res.data || [],
+        nhomKhac: nhomKhacRes.data || [],
+      },
+    };
   },
 
   // Word-doc generation still runs on Google Apps Script (Docs template in Drive).

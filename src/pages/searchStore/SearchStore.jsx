@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, MapPin, Phone, Store, MessageCircle, History, X, ChevronDown, ChevronRight, FileText } from 'lucide-react';
+import { Search, MapPin, Phone, Store, MessageCircle, History, X, ChevronDown, ChevronRight, FileText, AlertTriangle } from 'lucide-react';
 import LoadingModal from '../../components/LoadingModal';
 import { api } from '../../api';
 
@@ -94,10 +94,76 @@ function InspectionHistoryRow({ insp }) {
   );
 }
 
+const XLVP_BADGE = {
+  'Đã trình':   'bg-green-100 text-green-700',
+  'Chờ trình':  'bg-yellow-100 text-yellow-700',
+  'Đang xử lý': 'bg-blue-100 text-blue-700',
+};
+
+function XlvpSection({ nhom1, nhomKhac }) {
+  const total = nhom1.length + nhomKhac.length;
+  if (total === 0) return (
+    <div className="text-center py-8 text-gray-400 text-sm">Chưa có XLVP nào</div>
+  );
+
+  return (
+    <div className="space-y-3">
+      {nhom1.length > 0 && (
+        <div>
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Nhóm 1 ({nhom1.length})</p>
+          <div className="space-y-2">
+            {nhom1.map((r) => (
+              <div key={r.id} className="border border-gray-100 rounded-lg px-4 py-3 bg-white">
+                <div className="flex items-start justify-between gap-2 mb-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xs font-medium text-gray-700">Tuần {r.week}</span>
+                    <span className="text-xs text-gray-400">· {r.kstt_submitted}</span>
+                    {r.Note && <span className={`text-xs px-1.5 py-0.5 rounded-full ${XLVP_BADGE[r.Note] || 'bg-gray-100 text-gray-600'}`}>{r.Note}</span>}
+                  </div>
+                  {(r.loss_value > 0) && (
+                    <span className="text-xs font-semibold text-red-600 shrink-0">{Number(r.loss_value).toLocaleString('vi-VN')} đ</span>
+                  )}
+                </div>
+                <p className="text-xs text-gray-800 font-medium">{r.emp_name} {r.emp_title && `· ${r.emp_title}`}</p>
+                {r.violation_text && <p className="text-xs text-gray-500 mt-0.5">{r.violation_text}</p>}
+                {r.recover_value > 0 && <p className="text-xs text-green-600 mt-0.5">Thu hồi: {Number(r.recover_value).toLocaleString('vi-VN')} đ</p>}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {nhomKhac.length > 0 && (
+        <div>
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Nhóm khác ({nhomKhac.length})</p>
+          <div className="space-y-2">
+            {nhomKhac.map((r) => (
+              <div key={r.id} className="border border-gray-100 rounded-lg px-4 py-3 bg-white">
+                <div className="flex items-start justify-between gap-2 mb-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xs font-medium text-gray-700">Tuần {r.week}</span>
+                    <span className="text-xs text-gray-400">· {r.kstt_submitted}</span>
+                    {r.status && <span className={`text-xs px-1.5 py-0.5 rounded-full ${XLVP_BADGE[r.status] || 'bg-gray-100 text-gray-600'}`}>{r.status}</span>}
+                  </div>
+                </div>
+                <p className="text-xs text-gray-800 font-medium">{r.emp_name} {r.emp_title && `· ${r.emp_title}`}</p>
+                {r.violation_text && <p className="text-xs text-gray-500 mt-0.5">{r.violation_text}</p>}
+                {r.disciplinary_action && <p className="text-xs text-indigo-600 mt-0.5">XLVP: {r.disciplinary_action}</p>}
+                {r.NOTE && <p className="text-xs text-gray-400 mt-0.5">{r.NOTE}</p>}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function HistoryModal({ shop, onClose }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [tab, setTab] = useState('gn');
 
   React.useEffect(() => {
     api.getStoreHistory(shop.site).then((r) => {
@@ -107,22 +173,27 @@ function HistoryModal({ shop, onClose }) {
     });
   }, [shop.site]);
 
-  const totalVio = (data || []).reduce((s, i) => s + (i.violations?.length || 0), 0);
+  const inspections = data?.inspections || [];
+  const nhom1 = data?.nhom1 || [];
+  const nhomKhac = data?.nhomKhac || [];
+  const totalVio = inspections.reduce((s, i) => s + (i.violations?.length || 0), 0);
+  const totalXlvp = nhom1.length + nhomKhac.length;
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-white">
       {/* Header */}
       <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100 shrink-0">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
           <History size={18} className="text-indigo-500" />
           <div>
             <h3 className="text-base font-bold text-gray-900">{shop.siteName}</h3>
-            <p className="text-xs text-gray-400">{shop.site} · Lịch sử ghi nhận & vi phạm</p>
+            <p className="text-xs text-gray-400">{shop.site} · Lịch sử ghi nhận & XLVP</p>
           </div>
           {data && (
-            <div className="flex gap-2 ml-2">
-              <span className="text-xs bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full font-medium">{data.length} lượt GN</span>
+            <div className="flex gap-2">
+              <span className="text-xs bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full font-medium">{inspections.length} lượt GN</span>
               {totalVio > 0 && <span className="text-xs bg-red-50 text-red-600 px-2 py-0.5 rounded-full font-medium">{totalVio} vi phạm</span>}
+              {totalXlvp > 0 && <span className="text-xs bg-orange-50 text-orange-600 px-2 py-0.5 rounded-full font-medium">{totalXlvp} XLVP</span>}
             </div>
           )}
         </div>
@@ -131,23 +202,46 @@ function HistoryModal({ shop, onClose }) {
         </button>
       </div>
 
+      {/* Tabs */}
+      {!loading && !error && (
+        <div className="flex gap-1 px-5 pt-3 pb-0 shrink-0">
+          <button
+            onClick={() => setTab('gn')}
+            className={`px-4 py-1.5 text-sm font-medium rounded-t-lg border-b-2 transition-colors ${tab === 'gn' ? 'border-indigo-500 text-indigo-600 bg-indigo-50' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+          >
+            Ghi nhận {inspections.length > 0 && `(${inspections.length})`}
+          </button>
+          <button
+            onClick={() => setTab('xlvp')}
+            className={`px-4 py-1.5 text-sm font-medium rounded-t-lg border-b-2 transition-colors ${tab === 'xlvp' ? 'border-orange-500 text-orange-600 bg-orange-50' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+          >
+            XLVP {totalXlvp > 0 && `(${totalXlvp})`}
+          </button>
+        </div>
+      )}
+      <div className="border-b border-gray-100 shrink-0" />
+
       {/* Body */}
       <div className="flex-1 overflow-y-auto px-5 py-4">
         {loading ? (
           <div className="flex items-center justify-center py-20 text-gray-400 text-sm">Đang tải...</div>
         ) : error ? (
           <div className="text-center py-20 text-red-500 text-sm">{error}</div>
-        ) : !data || data.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-gray-400">
-            <FileText size={36} className="mb-3 opacity-40" />
-            <p className="text-sm">Chưa có ghi nhận nào tại cửa hàng này</p>
-          </div>
+        ) : tab === 'gn' ? (
+          inspections.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-20 text-gray-400">
+              <FileText size={36} className="mb-3 opacity-40" />
+              <p className="text-sm">Chưa có ghi nhận nào tại cửa hàng này</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {inspections.map((insp) => (
+                <InspectionHistoryRow key={insp.id} insp={insp} />
+              ))}
+            </div>
+          )
         ) : (
-          <div className="space-y-2">
-            {data.map((insp) => (
-              <InspectionHistoryRow key={insp.id} insp={insp} />
-            ))}
-          </div>
+          <XlvpSection nhom1={nhom1} nhomKhac={nhomKhac} />
         )}
       </div>
     </div>
