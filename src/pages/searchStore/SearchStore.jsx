@@ -167,6 +167,7 @@ function HistoryModal({ shop, onClose }) {
 
   React.useEffect(() => {
     api.getStoreHistory(shop.site).then((r) => {
+      console.log('[StoreHistory]', shop.site, r);
       if (r.success) setData(r.data);
       else setError(r.message || 'Lỗi tải dữ liệu');
       setLoading(false);

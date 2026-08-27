@@ -430,8 +430,8 @@ export const api = {
   getStoreHistory: async (sap) => {
     const [inspRes, nhom1Res, nhomKhacRes] = await Promise.all([
       supabase.from('inspections').select('*, violations(*)').ilike('sap', sap).order('ngayKiemTra', { ascending: false }),
-      supabase.from('th_nhom_1').select('*').ilike('sap', sap).order('finished_date', { ascending: false }),
-      supabase.from('th_nhom_khac').select('*').ilike('sap', sap).order('approved_date', { ascending: false }),
+      supabase.from('th_nhom_1').select('*').ilike('sap', `%${sap}%`).order('finished_date', { ascending: false }),
+      supabase.from('th_nhom_khac').select('*').ilike('sap', `%${sap}%`).order('approved_date', { ascending: false }),
     ]);
     if (inspRes.error) return { success: false, message: inspRes.error.message };
     return {
