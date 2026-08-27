@@ -1,9 +1,20 @@
 import React, { useState } from 'react';
-import { Search, MapPin, Phone, Store, MessageCircle } from 'lucide-react';
+import { Search, MapPin, Phone, Store, MessageCircle, History, X, ChevronDown, ChevronRight, FileText } from 'lucide-react';
 import LoadingModal from '../../components/LoadingModal';
 import { api } from '../../api';
 
 const INPUT = "border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent";
+
+const TRANG_THAI_INSPECTION = {
+  'Đang làm rõ': 'bg-purple-100 text-purple-700',
+  'Đã hoàn thành': 'bg-green-100 text-green-700',
+};
+const TRANG_THAI_VIOLATION = {
+  'Vi phạm':             'bg-red-100 text-red-700',
+  'Nhắc nhở':            'bg-orange-100 text-orange-700',
+  'Xác minh thêm':       'bg-yellow-100 text-yellow-700',
+  'Ghi nhận thực trạng': 'bg-gray-100 text-gray-600',
+};
 
 const InfoRow = ({ label, value }) =>
   value ? (
@@ -13,6 +24,136 @@ const InfoRow = ({ label, value }) =>
     </div>
   ) : null;
 
+function InspectionHistoryRow({ insp }) {
+  const [open, setOpen] = useState(false);
+  const vios = insp.violations || [];
+
+  return (
+    <div className="border border-gray-100 rounded-lg overflow-hidden">
+      <button
+        onClick={() => vios.length > 0 && setOpen((p) => !p)}
+        className="w-full flex items-center gap-3 px-4 py-3 bg-gray-50 hover:bg-gray-100 transition-colors text-left"
+      >
+        {vios.length > 0
+          ? open ? <ChevronDown size={14} className="text-gray-400 shrink-0" /> : <ChevronRight size={14} className="text-gray-400 shrink-0" />
+          : <span className="w-3.5 shrink-0" />
+        }
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-sm font-medium text-gray-800">{insp.ngayKiemTra}</span>
+            <span className="text-xs text-gray-500">· {insp.kstt}</span>
+            {vios.length > 0 && (
+              <span className="text-xs bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded font-medium">{vios.length} vi phạm</span>
+            )}
+            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${TRANG_THAI_INSPECTION[insp.trang_thai] || 'bg-purple-100 text-purple-700'}`}>
+              {insp.trang_thai || 'Đang làm rõ'}
+            </span>
+          </div>
+          {insp.thuTin && (
+            <p className="text-xs text-gray-400 mt-0.5 truncate">{insp.thuTin}</p>
+          )}
+        </div>
+        <span className="text-xs font-mono text-gray-300 shrink-0">{insp.id}</span>
+      </button>
+
+      {open && vios.length > 0 && (
+        <div className="divide-y divide-gray-50">
+          {vios.map((v) => (
+            <div key={v.id} className="px-5 py-2.5 bg-white">
+              <div className="flex items-start gap-3">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap mb-0.5">
+                    <span className="text-xs font-medium text-gray-700">{v.nhom}</span>
+                    {v.trang_thai && (
+                      <span className={`text-xs px-1.5 py-0.5 rounded-full ${TRANG_THAI_VIOLATION[v.trang_thai] || 'bg-gray-100 text-gray-600'}`}>
+                        {v.trang_thai}
+                      </span>
+                    )}
+                  </div>
+                  {v.hanh_vi?.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mb-1">
+                      {(Array.isArray(v.hanh_vi) ? v.hanh_vi : []).map((h, i) => (
+                        <span key={i} className="text-xs bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded">{h}</span>
+                      ))}
+                    </div>
+                  )}
+                  {v.mo_ta && <p className="text-xs text-gray-500">{v.mo_ta}</p>}
+                  <div className="flex flex-wrap gap-x-4 gap-y-0.5 mt-1">
+                    {v.ten_nv && <span className="text-xs text-gray-400">{v.ma_nv} {v.ten_nv} {v.chuc_danh && `· ${v.chuc_danh}`}</span>}
+                    {v.ket_luan && <span className="text-xs text-gray-400">KL: {v.ket_luan}</span>}
+                    {v.xlvp && <span className="text-xs text-gray-400">XLVP: {v.xlvp}</span>}
+                    {v.gia_tri > 0 && <span className="text-xs font-medium text-red-600">{Number(v.gia_tri).toLocaleString('vi-VN')} đ</span>}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function HistoryModal({ shop, onClose }) {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  React.useEffect(() => {
+    api.getStoreHistory(shop.site).then((r) => {
+      if (r.success) setData(r.data);
+      else setError(r.message || 'Lỗi tải dữ liệu');
+      setLoading(false);
+    });
+  }, [shop.site]);
+
+  const totalVio = (data || []).reduce((s, i) => s + (i.violations?.length || 0), 0);
+
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col bg-white">
+      {/* Header */}
+      <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100 shrink-0">
+        <div className="flex items-center gap-3">
+          <History size={18} className="text-indigo-500" />
+          <div>
+            <h3 className="text-base font-bold text-gray-900">{shop.siteName}</h3>
+            <p className="text-xs text-gray-400">{shop.site} · Lịch sử ghi nhận & vi phạm</p>
+          </div>
+          {data && (
+            <div className="flex gap-2 ml-2">
+              <span className="text-xs bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full font-medium">{data.length} lượt GN</span>
+              {totalVio > 0 && <span className="text-xs bg-red-50 text-red-600 px-2 py-0.5 rounded-full font-medium">{totalVio} vi phạm</span>}
+            </div>
+          )}
+        </div>
+        <button onClick={onClose} className="p-1.5 text-gray-400 hover:text-gray-700 rounded-lg hover:bg-gray-100">
+          <X size={18} />
+        </button>
+      </div>
+
+      {/* Body */}
+      <div className="flex-1 overflow-y-auto px-5 py-4">
+        {loading ? (
+          <div className="flex items-center justify-center py-20 text-gray-400 text-sm">Đang tải...</div>
+        ) : error ? (
+          <div className="text-center py-20 text-red-500 text-sm">{error}</div>
+        ) : !data || data.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20 text-gray-400">
+            <FileText size={36} className="mb-3 opacity-40" />
+            <p className="text-sm">Chưa có ghi nhận nào tại cửa hàng này</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {data.map((insp) => (
+              <InspectionHistoryRow key={insp.id} insp={insp} />
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 const SearchStore = () => {
   const [site,     setSite]     = useState('');
   const [siteName, setSiteName] = useState('');
@@ -21,6 +162,7 @@ const SearchStore = () => {
   const [searched, setSearched] = useState(false);
   const [loading,  setLoading]  = useState(false);
   const [error,    setError]    = useState('');
+  const [historyShop, setHistoryShop] = useState(null);
 
   const handleSearch = async () => {
     if (!site && !siteName && !siteAdd) { setError('Nhập ít nhất một thông tin tìm kiếm'); return; }
@@ -83,12 +225,21 @@ const SearchStore = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {results.map((shop, i) => (
               <div key={i} className="border border-gray-100 rounded-xl p-4 hover:shadow-md transition-shadow bg-white">
-                <div className="flex items-start gap-2 mb-3">
-                  <Store className="w-4 h-4 text-indigo-500 shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-sm font-semibold text-gray-800 leading-snug">{shop.siteName}</p>
-                    <p className="text-xs text-indigo-600 font-medium">{shop.site}</p>
+                <div className="flex items-start justify-between gap-2 mb-3">
+                  <div className="flex items-start gap-2">
+                    <Store className="w-4 h-4 text-indigo-500 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-semibold text-gray-800 leading-snug">{shop.siteName}</p>
+                      <p className="text-xs text-indigo-600 font-medium">{shop.site}</p>
+                    </div>
                   </div>
+                  <button
+                    onClick={() => setHistoryShop(shop)}
+                    className="shrink-0 inline-flex items-center gap-1 px-2 py-1 text-xs bg-indigo-50 text-indigo-600 rounded-md hover:bg-indigo-100 transition-colors font-medium"
+                    title="Xem lịch sử ghi nhận & vi phạm"
+                  >
+                    <History size={12} /> Lịch sử
+                  </button>
                 </div>
 
                 {shop.address && (
@@ -154,6 +305,10 @@ const SearchStore = () => {
       </div>
 
       {loading && <LoadingModal message="Đang tìm kiếm..." />}
+
+      {historyShop && (
+        <HistoryModal shop={historyShop} onClose={() => setHistoryShop(null)} />
+      )}
     </div>
   );
 };

@@ -426,6 +426,16 @@ export const api = {
     return error ? { success: false, message: error.message } : { success: true };
   },
 
+  // ---- Store History (inspections + violations for a specific SAP) ----
+  getStoreHistory: async (sap) => {
+    const { data, error } = await supabase
+      .from('inspections')
+      .select('*, violations(*)')
+      .ilike('sap', sap)
+      .order('ngayKiemTra', { ascending: false });
+    return error ? { success: false, message: error.message } : { success: true, data: data || [] };
+  },
+
   // Word-doc generation still runs on Google Apps Script (Docs template in Drive).
   createRecord: (data) => gasFetch('createRecord', data),
   // Fire-and-forget Telegram notification after creating a new inspection.
