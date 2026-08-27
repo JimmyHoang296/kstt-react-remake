@@ -7,14 +7,19 @@ import useStore from "../../store/useStore";
 import LoadingModal from "../../components/LoadingModal";
 import ViolationItemModal from "./ViolationItemModal";
 
-const CHAIN_OPTIONS = ["rural", "urban", "winlife"];
+const CHAIN_OPTIONS = ["WMT", "Rural", "Urban MN", "Urban MB"];
 
-const CHUOI_MAP = { urban: 'urban', rural: 'rural', win: 'winlife', winlife: 'winlife' };
+const CHUOI_MAP = { urban: 'Urban MN', rural: 'Rural', win: 'WMT', winlife: 'WMT' };
+
+const INSPECTION_TRANG_THAI_OPTIONS = ['Đang làm rõ', 'Đã hoàn thành'];
 
 const TRANG_THAI_COLORS = {
-  'Mới': 'bg-blue-100 text-blue-700',
-  'Đang xử lý': 'bg-yellow-100 text-yellow-700',
-  'Đã xử lý': 'bg-green-100 text-green-700',
+  'Vi phạm': 'bg-red-100 text-red-700',
+  'Nhắc nhở': 'bg-orange-100 text-orange-700',
+  'Xác minh thêm': 'bg-yellow-100 text-yellow-700',
+  'Ghi nhận thực trạng': 'bg-blue-100 text-blue-700',
+  'Đang làm rõ': 'bg-purple-100 text-purple-700',
+  'Đã hoàn thành': 'bg-green-100 text-green-700',
 };
 
 const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' });
@@ -49,6 +54,7 @@ const ViolationDetailModal = ({ data, inspection, onClose, onCreated, onUpdated,
         ngayKiemTra: today,
         kstt: isEmp ? data.user.name : '',
         thuTin: '',
+        trang_thai: 'Đang làm rõ',
       };
     }
     // map batCapVH → thuTin for existing records
@@ -183,8 +189,8 @@ const ViolationDetailModal = ({ data, inspection, onClose, onCreated, onUpdated,
   };
 
   return (
-    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-start justify-center p-3 z-50">
-      <div className="bg-white rounded-lg shadow-lg w-full max-w-5xl my-6">
+    <div className="fixed inset-0 z-50 flex flex-col bg-white">
+      <div className="w-full h-full flex flex-col overflow-hidden">
 
         {/* Header */}
         <div className="flex justify-between items-center px-4 py-3 border-b">
@@ -219,7 +225,7 @@ const ViolationDetailModal = ({ data, inspection, onClose, onCreated, onUpdated,
           <button onClick={onClose} className="text-gray-400 hover:text-gray-700 text-2xl leading-none ml-2">&times;</button>
         </div>
 
-        <div className="p-4 space-y-4">
+        <div className="p-4 space-y-4 overflow-y-auto flex-1">
           {/* Inspection info grid */}
           <div className="grid grid-cols-4 gap-3">
             <div className="relative">
@@ -289,11 +295,19 @@ const ViolationDetailModal = ({ data, inspection, onClose, onCreated, onUpdated,
                 className={`w-full px-2 py-1.5 border rounded text-sm ${(isEmp || !canEdit) ? 'bg-gray-50 text-gray-500 cursor-not-allowed' : ''}`} />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">Ghi nhận thu tin</label>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Trạng thái</label>
+              <select name="trang_thai" value={formData.trang_thai || 'Đang làm rõ'} onChange={handleChange}
+                disabled={!canEdit}
+                className={`w-full px-2 py-1.5 border rounded text-sm bg-white ${!canEdit ? 'opacity-60 cursor-not-allowed' : ''}`}>
+                {INSPECTION_TRANG_THAI_OPTIONS.map((o) => <option key={o}>{o}</option>)}
+              </select>
+            </div>
+            <div className="col-span-4">
+              <label className="block text-sm font-semibold text-gray-700 mb-1">Ghi nhận thêm</label>
               <textarea name="thuTin" value={formData.thuTin || ''} onChange={handleChange}
                 readOnly={!canEdit}
-                rows={2} className={`w-full px-2 py-1.5 border rounded text-sm resize-none ${!canEdit ? 'bg-gray-50 text-gray-500' : ''}`}
-                placeholder="Ghi nhận thu thập thông tin..." />
+                rows={5} className={`w-full px-3 py-2 border-2 rounded-lg text-sm resize-none ${!canEdit ? 'bg-gray-50 text-gray-500' : 'border-indigo-200 focus:border-indigo-400 focus:outline-none'}`}
+                placeholder="Ghi nhận thêm thông tin, bằng chứng, chi tiết bổ sung..." />
             </div>
           </div>
 

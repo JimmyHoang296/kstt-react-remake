@@ -181,6 +181,12 @@ const TRANG_THAI_COLOR = {
   'Ghi nhận thực trạng': 'bg-gray-100 text-gray-600',
 };
 
+const INSPECTION_TRANG_THAI_OPTIONS = ['Đang làm rõ', 'Đã hoàn thành'];
+const INSPECTION_TRANG_THAI_COLOR = {
+  'Đang làm rõ':  'bg-purple-100 text-purple-700',
+  'Đã hoàn thành':'bg-green-100 text-green-700',
+};
+
 function StatCard({ label, value, sub }) {
   return (
     <div className="bg-white border border-gray-100 rounded-xl px-5 py-4 shadow-sm">
@@ -449,12 +455,19 @@ function InspectionRow({ insp, showKstt }) {
             <span className="text-xs font-semibold text-indigo-600">{vios.length}</span>
           )}
         </td>
+        <td className="px-3 py-2.5">
+          {insp.trang_thai && (
+            <span className={`text-xs px-2 py-0.5 rounded-full font-medium whitespace-nowrap ${INSPECTION_TRANG_THAI_COLOR[insp.trang_thai] || 'bg-gray-100 text-gray-600'}`}>
+              {insp.trang_thai}
+            </span>
+          )}
+        </td>
       </tr>
 
       {open && vios.map((v) => (
         <tr key={v.id} className="bg-indigo-50/40 border-l-2 border-indigo-300">
           <td />
-          <td colSpan={showKstt ? 6 : 5} className="px-4 py-2">
+          <td colSpan={showKstt ? 7 : 6} className="px-4 py-2">
             <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-0.5 text-xs">
               <span className="text-gray-500 font-medium">Nhóm</span>
               <span>{v.nhom}</span>
@@ -520,6 +533,7 @@ const ViolationReport = () => {
   const [searchText, setSearchText]   = useState('');
   const [selectedNhom, setSelectedNhom] = useState([]);
   const [selectedKstt, setSelectedKstt] = useState([]);
+  const [selectedTrangThai, setSelectedTrangThai] = useState('');
   const [ksttHodMap, setKsttHodMap] = useState({});
   const [activeTab, setActiveTab] = useState('ch');
 
@@ -560,8 +574,11 @@ const ViolationReport = () => {
     if (selectedKstt.length > 0) {
       r = r.filter((i) => selectedKstt.includes(i.kstt));
     }
+    if (selectedTrangThai) {
+      r = r.filter((i) => i.trang_thai === selectedTrangThai);
+    }
     return r;
-  }, [inspections, searchText, selectedNhom, selectedKstt]);
+  }, [inspections, searchText, selectedNhom, selectedKstt, selectedTrangThai]);
 
   const uniqueStores = new Set(filtered.map((i) => i.sap).filter(Boolean)).size;
 
@@ -611,7 +628,17 @@ const ViolationReport = () => {
           </div>
           <NhomMultiSelect selected={selectedNhom} onChange={setSelectedNhom} />
           {showKstt && <KsttMultiSelect ksttList={ksttList} selected={selectedKstt} onChange={setSelectedKstt} />}
-          {(searchText || selectedNhom.length > 0 || selectedKstt.length > 0) && (
+          <div>
+            <select
+              value={selectedTrangThai}
+              onChange={(e) => setSelectedTrangThai(e.target.value)}
+              className="border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            >
+              <option value="">Tất cả trạng thái</option>
+              {INSPECTION_TRANG_THAI_OPTIONS.map((t) => <option key={t} value={t}>{t}</option>)}
+            </select>
+          </div>
+          {(searchText || selectedNhom.length > 0 || selectedKstt.length > 0 || selectedTrangThai) && (
             <span className="text-xs text-gray-400 whitespace-nowrap">{filtered.length}/{inspections.length}</span>
           )}
           <button
@@ -678,6 +705,7 @@ const ViolationReport = () => {
                       <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Tên CH</th>
                       <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Nhóm vi phạm</th>
                       <th className="px-3 py-2.5 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider"># VP</th>
+                      <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Trạng thái SV</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
