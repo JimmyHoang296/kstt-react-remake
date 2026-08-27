@@ -74,8 +74,8 @@ const ViolationItemModal = ({ item, nhomGhiNhan, penalties, onClose, onSave }) =
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-3 z-[60]">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end justify-center z-[60]">
+      <div className="bg-white rounded-t-xl shadow-xl w-full max-h-[75vh] flex flex-col">
 
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b shrink-0">
@@ -88,12 +88,12 @@ const ViolationItemModal = ({ item, nhomGhiNhan, penalties, onClose, onSave }) =
         </div>
 
         {/* Body */}
-        <div className="overflow-y-auto flex-1 px-4 py-3 space-y-4">
+        <div className="overflow-y-auto flex-1 px-5 py-3">
+          <div className="grid grid-cols-2 gap-x-6 gap-y-3">
 
-          {/* ── GHI NHẬN VI PHẠM ── */}
-          <div>
-            <p className={SECTION}>Ghi nhận vi phạm</p>
-            <div className="space-y-3">
+            {/* ── CỘT TRÁI: Ghi nhận vi phạm ── */}
+            <div className="space-y-2">
+              <p className={SECTION}>Ghi nhận vi phạm</p>
 
               {/* Nhóm hành vi */}
               <div>
@@ -117,7 +117,7 @@ const ViolationItemModal = ({ item, nhomGhiNhan, penalties, onClose, onSave }) =
                       <ChevronDown size={14} className={`text-gray-400 shrink-0 transition-transform ${hanhViOpen ? '' : '-rotate-90'}`} />
                     </button>
                     {hanhViOpen && (
-                      <div className="border-t max-h-36 overflow-y-auto">
+                      <div className="border-t max-h-32 overflow-y-auto">
                         {hanhViList.map((hv) => (
                           <label key={hv} className="flex items-center gap-2 px-3 py-1.5 hover:bg-gray-50 cursor-pointer text-sm">
                             <input type="checkbox"
@@ -131,7 +131,7 @@ const ViolationItemModal = ({ item, nhomGhiNhan, penalties, onClose, onSave }) =
                     )}
                   </div>
                   {selectedCount > 0 && (
-                    <div className="flex flex-wrap gap-1 mt-1.5">
+                    <div className="flex flex-wrap gap-1 mt-1">
                       {(formData.hanh_vi || []).map((hv) => (
                         <span key={hv} className="inline-flex items-center gap-1 bg-indigo-100 text-indigo-700 text-xs px-1.5 py-0.5 rounded-full">
                           {hv}
@@ -142,6 +142,20 @@ const ViolationItemModal = ({ item, nhomGhiNhan, penalties, onClose, onSave }) =
                   )}
                 </div>
               )}
+
+              {/* Giá trị + Trạng thái */}
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className={LABEL}>Giá trị (VNĐ)</label>
+                  <input type="number" name="gia_tri" value={formData.gia_tri || ''} onChange={set} className={INPUT} min="0" />
+                </div>
+                <div>
+                  <label className={LABEL}>Trạng thái</label>
+                  <select name="trang_thai" value={formData.trang_thai || 'Vi phạm'} onChange={set} className={SELECT}>
+                    {TRANG_THAI_OPTIONS.map((t) => <option key={t}>{t}</option>)}
+                  </select>
+                </div>
+              </div>
 
               {/* Mô tả */}
               <div>
@@ -156,28 +170,11 @@ const ViolationItemModal = ({ item, nhomGhiNhan, penalties, onClose, onSave }) =
                 <textarea name="nguyen_nhan" value={formData.nguyen_nhan || ''} onChange={set} rows={2}
                   className={TEXTAREA} placeholder="Nguyên nhân..." />
               </div>
-
-              {/* Giá trị + Trạng thái */}
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className={LABEL}>Giá trị (VNĐ)</label>
-                  <input type="number" name="gia_tri" value={formData.gia_tri || ''} onChange={set}
-                    className={INPUT} min="0" />
-                </div>
-                <div>
-                  <label className={LABEL}>Trạng thái</label>
-                  <select name="trang_thai" value={formData.trang_thai || 'Vi phạm'} onChange={set} className={SELECT}>
-                    {TRANG_THAI_OPTIONS.map((t) => <option key={t}>{t}</option>)}
-                  </select>
-                </div>
-              </div>
             </div>
-          </div>
 
-          {/* ── XỬ LÝ VI PHẠM ── */}
-          <div>
-            <p className={SECTION}>Xử lý vi phạm</p>
-            <div className="space-y-3">
+            {/* ── CỘT PHẢI: Xử lý vi phạm ── */}
+            <div className="space-y-2">
+              <p className={SECTION}>Xử lý vi phạm</p>
 
               {/* Mã NV + Tên NV + Chức danh */}
               <div className="grid grid-cols-3 gap-2">
@@ -195,7 +192,7 @@ const ViolationItemModal = ({ item, nhomGhiNhan, penalties, onClose, onSave }) =
                 </div>
               </div>
 
-              {/* Kết luận + Nhóm lỗi — ngang nhau */}
+              {/* Kết luận + Nhóm lỗi */}
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label className={LABEL}>Kết luận</label>
@@ -216,17 +213,11 @@ const ViolationItemModal = ({ item, nhomGhiNhan, penalties, onClose, onSave }) =
               {/* Lỗi chi tiết */}
               <div>
                 <label className={LABEL}>Lỗi chi tiết</label>
-                <select
-                  name="loi_chi_tiet"
-                  value={formData.loi_chi_tiet || ''}
-                  onChange={set}
+                <select name="loi_chi_tiet" value={formData.loi_chi_tiet || ''} onChange={set}
                   disabled={!formData.nhom_loi}
-                  className={`${SELECT} ${!formData.nhom_loi ? 'text-gray-400 bg-gray-50' : ''}`}
-                >
+                  className={`${SELECT} ${!formData.nhom_loi ? 'text-gray-400 bg-gray-50' : ''}`}>
                   <option value="">{formData.nhom_loi ? '-- Chọn lỗi chi tiết --' : '-- Chọn nhóm lỗi trước --'}</option>
-                  {loiChiTietList.map((g, i) => (
-                    <option key={i} value={g}>{g}</option>
-                  ))}
+                  {loiChiTietList.map((g, i) => <option key={i} value={g}>{g}</option>)}
                 </select>
               </div>
 
@@ -238,14 +229,15 @@ const ViolationItemModal = ({ item, nhomGhiNhan, penalties, onClose, onSave }) =
                   {(penalties || []).map((p) => <option key={p} value={p}>{p}</option>)}
                 </select>
               </div>
-            </div>
-          </div>
 
-          {/* ── CUỐI: NỘI DUNG KẾT LUẬN ── */}
-          <div>
-            <label className={LABEL}>Nội dung kết luận</label>
-            <textarea name="nd_ket_luan" value={formData.nd_ket_luan || ''} onChange={set} rows={3}
-              className={TEXTAREA} placeholder="Nội dung kết luận xử lý..." />
+              {/* Nội dung kết luận */}
+              <div>
+                <label className={LABEL}>Nội dung kết luận</label>
+                <textarea name="nd_ket_luan" value={formData.nd_ket_luan || ''} onChange={set} rows={3}
+                  className={TEXTAREA} placeholder="Nội dung kết luận xử lý..." />
+              </div>
+            </div>
+
           </div>
         </div>
 
