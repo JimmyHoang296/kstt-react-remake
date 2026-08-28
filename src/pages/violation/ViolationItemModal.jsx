@@ -74,25 +74,25 @@ const ViolationItemModal = ({ item, nhomGhiNhan, penalties, onClose, onSave }) =
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end justify-center z-[60]">
-      <div className="bg-white rounded-t-xl shadow-xl w-full max-h-[75vh] flex flex-col">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-5xl max-h-[92vh] flex flex-col">
 
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b shrink-0">
+        <div className="flex items-center justify-between px-5 py-3 border-b shrink-0 bg-gray-50 rounded-t-xl">
           <h4 className="text-sm font-bold text-gray-900">
             {isNew ? 'Thêm vi phạm' : 'Sửa vi phạm'}
           </h4>
-          <button onClick={onClose} className="p-1 text-gray-400 hover:text-gray-700">
+          <button onClick={onClose} className="p-1 text-gray-400 hover:text-gray-700 rounded hover:bg-gray-200">
             <X size={16} />
           </button>
         </div>
 
         {/* Body */}
-        <div className="overflow-y-auto flex-1 px-5 py-3">
-          <div className="grid grid-cols-2 gap-x-6 gap-y-3">
+        <div className="overflow-y-auto flex-1 px-5 py-4">
+          <div className="grid grid-cols-2 gap-y-3" style={{columnGap: 0}}>
 
             {/* ── CỘT TRÁI: Ghi nhận vi phạm ── */}
-            <div className="space-y-2">
+            <div className="space-y-2 pr-6 border-r border-gray-200">
               <p className={SECTION}>Ghi nhận vi phạm</p>
 
               {/* Nhóm hành vi */}
@@ -173,7 +173,7 @@ const ViolationItemModal = ({ item, nhomGhiNhan, penalties, onClose, onSave }) =
             </div>
 
             {/* ── CỘT PHẢI: Xử lý vi phạm ── */}
-            <div className="space-y-2">
+            <div className="space-y-2 pl-6">
               <p className={SECTION}>Xử lý vi phạm</p>
 
               {/* Mã NV + Tên NV + Chức danh */}
@@ -242,13 +242,13 @@ const ViolationItemModal = ({ item, nhomGhiNhan, penalties, onClose, onSave }) =
         </div>
 
         {/* Footer */}
-        <div className="flex justify-end gap-2 px-4 py-3 border-t shrink-0">
+        <div className="flex justify-end gap-2 px-5 py-3 border-t shrink-0 bg-gray-50 rounded-b-xl">
           <button onClick={onClose}
-            className="px-3 py-1.5 text-xs border rounded text-gray-600 hover:bg-gray-50">
+            className="px-4 py-1.5 text-xs border rounded text-gray-600 hover:bg-gray-100">
             Hủy
           </button>
           <button onClick={() => onSave(formData)}
-            className="px-3 py-1.5 text-xs bg-indigo-600 text-white rounded hover:bg-indigo-700 flex items-center gap-1.5">
+            className="px-4 py-1.5 text-xs bg-indigo-600 text-white rounded hover:bg-indigo-700 flex items-center gap-1.5">
             <Save size={12} /> Lưu
           </button>
         </div>
