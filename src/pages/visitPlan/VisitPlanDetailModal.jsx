@@ -51,8 +51,14 @@ const VisitPlanDetailModal = ({ plan, onClose, onSave, onUpdate, onDelete }) => 
               name="site"
               value={formData.site || ""}
               onChange={handleChange}
+              placeholder={isNew ? "VD: SV00123, SV00456, SV00789" : ""}
               className="w-full p-2 border rounded-md"
             />
+            {isNew && (
+              <p className="text-xs text-gray-400 mt-1">
+                Có thể nhập nhiều mã CH cùng lúc, cách nhau bởi dấu phẩy để tạo nhiều kế hoạch cho cùng ngày kiểm tra.
+              </p>
+            )}
           </div>
         </div>
 

@@ -299,9 +299,9 @@ export const api = {
 
   // ---- TH Nhóm 1 & Nhóm Khác ----
   getThNhom1: async ({ role, userName, emps, startDate, endDate }) => {
-    let q = supabase.from('th_nhom_1').select('*').order('finished_date', { ascending: false });
-    if (startDate) q = q.gte('finished_date', startDate);
-    if (endDate)   q = q.lte('finished_date', endDate);
+    let q = supabase.from('th_nhom_1').select('*').order('approved_date', { ascending: false });
+    if (startDate) q = q.gte('approved_date', startDate);
+    if (endDate)   q = q.lte('approved_date', endDate);
     if (role === 'emp') q = q.eq('kstt_submitted', userName);
     else if (role === 'hod') q = q.in('kstt_submitted', [...new Set([userName, ...emps])]);
     const { data, error } = await q;
@@ -319,9 +319,9 @@ export const api = {
 
   // ---- XLVP Lead: th_nhom_1 & th_nhom_khac (all rows, no role filter) ----
   getAllThNhom1: async ({ startDate, endDate } = {}) => {
-    let q = supabase.from('th_nhom_1').select('*').order('finished_date', { ascending: false });
-    if (startDate) q = q.gte('finished_date', startDate);
-    if (endDate)   q = q.lte('finished_date', endDate);
+    let q = supabase.from('th_nhom_1').select('*').order('approved_date', { ascending: false });
+    if (startDate) q = q.gte('approved_date', startDate);
+    if (endDate)   q = q.lte('approved_date', endDate);
     const { data, error } = await q;
     return error ? { success: false, message: error.message } : { success: true, data: data || [] };
   },
@@ -338,6 +338,14 @@ export const api = {
   },
   updateThNhomKhac: async (id, fields) => {
     const { error } = await supabase.from('th_nhom_khac').update(fields).eq('id', id);
+    return error ? { success: false, message: error.message } : { success: true };
+  },
+  deleteThNhom1: async (id) => {
+    const { error } = await supabase.from('th_nhom_1').delete().eq('id', id);
+    return error ? { success: false, message: error.message } : { success: true };
+  },
+  deleteThNhomKhac: async (id) => {
+    const { error } = await supabase.from('th_nhom_khac').delete().eq('id', id);
     return error ? { success: false, message: error.message } : { success: true };
   },
   bulkSetTrinh: async (table, ids) => {
@@ -455,6 +463,12 @@ export const api = {
     const row = { ...sanitize(data, VISITPLAN_CFG), id };
     const { error } = await supabase.from('visit_plan').insert(row);
     return error ? { success: false, message: error.message } : { success: true, data: id };
+  },
+  createVisitPlans: async ({ sites, ...rest }) => {
+    const startId = await nextVisitPlanId();
+    const rows = sites.map((site, i) => ({ ...sanitize({ ...rest, site }, VISITPLAN_CFG), id: startId + i }));
+    const { error } = await supabase.from('visit_plan').insert(rows);
+    return error ? { success: false, message: error.message } : { success: true, data: rows };
   },
   updateVisitPlan: async (data) => {
     const { error } = await supabase

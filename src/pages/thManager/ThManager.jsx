@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ChevronDown, ChevronUp, ChevronsUpDown, FileText, Search, X } from 'lucide-react';
+import { ChevronDown, ChevronUp, ChevronsUpDown, FileText, Search, Trash2, X } from 'lucide-react';
 import { api } from '../../api';
 import useStore from '../../store/useStore';
 import Pagination from '../../components/Pagination';
@@ -53,8 +53,38 @@ function usePaged(rows, page) {
   return { paged: rows.slice((p - 1) * PAGE_SIZE, p * PAGE_SIZE), total };
 }
 
+// ─── Delete Confirm Modal ──────────────────────────────────────────────────────
+function DeleteConfirmModal({ row, onConfirm, onCancel, loading }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+      <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-sm mx-4">
+        <div className="flex items-center gap-3 mb-3">
+          <div className="p-2 bg-red-100 rounded-full">
+            <Trash2 className="w-5 h-5 text-red-600" />
+          </div>
+          <h3 className="text-base font-semibold text-gray-800">Xác nhận xóa</h3>
+        </div>
+        <p className="text-sm text-gray-600 mb-1">
+          Bạn có chắc muốn xóa vi phạm của <span className="font-medium">{row.emp_name}</span>?
+        </p>
+        <p className="text-xs text-gray-400 mb-5 line-clamp-2">{row.violation_text}</p>
+        <div className="flex gap-2 justify-end">
+          <button onClick={onCancel} disabled={loading}
+            className="px-4 py-2 text-sm border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 disabled:opacity-50">
+            Hủy
+          </button>
+          <button onClick={onConfirm} disabled={loading}
+            className="px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-60 flex items-center gap-1.5">
+            {loading ? 'Đang xóa...' : <><Trash2 className="w-3.5 h-3.5" />Xóa</>}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Nhóm 1 Table ─────────────────────────────────────────────────────────────
-function Nhom1Table({ rows, showKstt, sort, onSort }) {
+function Nhom1Table({ rows, showKstt, sort, onSort, canDelete, onDelete }) {
   if (rows.length === 0) return <Empty />;
   return (
     <div className="overflow-x-auto">
@@ -71,6 +101,7 @@ function Nhom1Table({ rows, showKstt, sort, onSort }) {
             <Th field="loss_value" sort={sort} onSort={onSort}>Giá trị</Th>
             <Th field="recover_value" sort={sort} onSort={onSort}>Thu hồi</Th>
             <Th field="Note" sort={sort} onSort={onSort}>Ghi chú</Th>
+            {canDelete && <th className="px-3 py-2.5 w-10" />}
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-100">
@@ -90,6 +121,14 @@ function Nhom1Table({ rows, showKstt, sort, onSort }) {
                   <span className={`text-xs px-2 py-0.5 rounded-full ${BADGE[r.Note] || 'bg-gray-100 text-gray-600'}`}>{r.Note}</span>
                 )}
               </Td>
+              {canDelete && (
+                <td className="px-2 py-2.5 align-top">
+                  <button onClick={() => onDelete(r)}
+                    className="p-1 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded transition-colors">
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </td>
+              )}
             </tr>
           ))}
         </tbody>
@@ -99,7 +138,7 @@ function Nhom1Table({ rows, showKstt, sort, onSort }) {
 }
 
 // ─── Nhóm Khác Table ──────────────────────────────────────────────────────────
-function NhomKhacTable({ rows, showKstt, sort, onSort }) {
+function NhomKhacTable({ rows, showKstt, sort, onSort, canDelete, onDelete }) {
   if (rows.length === 0) return <Empty />;
   return (
     <div className="overflow-x-auto">
@@ -116,6 +155,7 @@ function NhomKhacTable({ rows, showKstt, sort, onSort }) {
             <Th field="disciplinary_action" sort={sort} onSort={onSort}>Hình thức XLVP</Th>
             <Th field="status" sort={sort} onSort={onSort}>Trạng thái</Th>
             <Th field="NOTE" sort={sort} onSort={onSort}>Ghi chú</Th>
+            {canDelete && <th className="px-3 py-2.5 w-10" />}
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-100">
@@ -135,6 +175,14 @@ function NhomKhacTable({ rows, showKstt, sort, onSort }) {
                 )}
               </Td>
               <Td>{r.NOTE}</Td>
+              {canDelete && (
+                <td className="px-2 py-2.5 align-top">
+                  <button onClick={() => onDelete(r)}
+                    className="p-1 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded transition-colors">
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </td>
+              )}
             </tr>
           ))}
         </tbody>
@@ -179,6 +227,10 @@ const ThManager = () => {
   const { role, name: userName } = data.user || {};
   const emps = data.emps || [];
   const showKstt = role === 'hod' || role === 'director';
+  const canDelete = role === 'hod' || role === 'director';
+
+  const [deleteTarget, setDeleteTarget] = useState(null); // { row, table }
+  const [deleting, setDeleting] = useState(false);
 
   const [startDate, setStart] = useState(daysAgo(60));
   const [endDate,   setEnd]   = useState(todayStr());
@@ -238,6 +290,22 @@ const ThManager = () => {
     { label: 'Tháng trước', action: () => { const pm = prevMonth(); applyRange(pm.start, pm.end); } },
   ];
 
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    const { row, table } = deleteTarget;
+    const fn = table === 'nhom1' ? api.deleteThNhom1 : api.deleteThNhomKhac;
+    const res = await fn(row.id);
+    setDeleting(false);
+    if (res.success) {
+      if (table === 'nhom1') setRows1((prev) => prev.filter((r) => r.id !== row.id));
+      else setRowsKhac((prev) => prev.filter((r) => r.id !== row.id));
+      setDeleteTarget(null);
+    } else {
+      alert('Xóa thất bại: ' + res.message);
+    }
+  };
+
   const handleQ = (e) => {
     const { name, value } = e.target;
     setQ((p) => ({ ...p, [name]: value }));
@@ -257,6 +325,14 @@ const ThManager = () => {
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+      {deleteTarget && (
+        <DeleteConfirmModal
+          row={deleteTarget.row}
+          loading={deleting}
+          onConfirm={handleDelete}
+          onCancel={() => setDeleteTarget(null)}
+        />
+      )}
       {/* Date range */}
       <div className="px-6 py-3 border-b border-gray-100 bg-gray-50">
         <div className="flex flex-wrap gap-3 items-end">
@@ -344,7 +420,8 @@ const ThManager = () => {
                   Hiển thị <span className="font-medium text-gray-600">{paged1.length}</span> / <span className="font-medium text-gray-600">{filtered1.length}</span> bản ghi
                 </p>
               </div>
-              <Nhom1Table rows={paged1} showKstt={showKstt} sort={sort1} onSort={handleSort1} />
+              <Nhom1Table rows={paged1} showKstt={showKstt} sort={sort1} onSort={handleSort1}
+                canDelete={canDelete} onDelete={(row) => setDeleteTarget({ row, table: 'nhom1' })} />
               <div className="px-6 pt-3">
                 <Pagination totalPages={total1} currentPage={page1} setCurrentPage={setPage1} />
               </div>
@@ -356,7 +433,8 @@ const ThManager = () => {
                   Hiển thị <span className="font-medium text-gray-600">{pagedK.length}</span> / <span className="font-medium text-gray-600">{filteredK.length}</span> bản ghi
                 </p>
               </div>
-              <NhomKhacTable rows={pagedK} showKstt={showKstt} sort={sortK} onSort={handleSortK} />
+              <NhomKhacTable rows={pagedK} showKstt={showKstt} sort={sortK} onSort={handleSortK}
+                canDelete={canDelete} onDelete={(row) => setDeleteTarget({ row, table: 'khac' })} />
               <div className="px-6 pt-3">
                 <Pagination totalPages={totalK} currentPage={pageK} setCurrentPage={setPageK} />
               </div>

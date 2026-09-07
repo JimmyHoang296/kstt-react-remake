@@ -85,12 +85,21 @@ const VisitPlanManager = () => {
   useEffect(() => { setData((prev) => ({ ...prev, visitPlan: plans })); }, [plans]);
 
   async function handleSaveNew(plan) {
-    const newPlan = { ...plan, user: data.user.id };
+    const sites = [...new Set(String(plan.site || '').split(',').map((s) => s.trim()).filter(Boolean))];
+    if (sites.length === 0) { addToast('Vui lòng nhập mã CH', 'error'); return; }
+
     try {
       setLoading(true);
-      const r = await api.createVisitPlan(newPlan);
-      if (r.success) { newPlan.id = r.data; setPlans((p) => [...p, newPlan]); closeModal(); addToast('Thêm kế hoạch thành công'); }
-      else addToast('Thêm thất bại', 'error');
+      if (sites.length === 1) {
+        const newPlan = { ...plan, site: sites[0], user: data.user.id };
+        const r = await api.createVisitPlan(newPlan);
+        if (r.success) { newPlan.id = r.data; setPlans((p) => [...p, newPlan]); closeModal(); addToast('Thêm kế hoạch thành công'); }
+        else addToast('Thêm thất bại', 'error');
+      } else {
+        const r = await api.createVisitPlans({ ...plan, sites, user: data.user.id });
+        if (r.success) { setPlans((p) => [...p, ...r.data]); closeModal(); addToast(`Đã thêm ${r.data.length} kế hoạch`); }
+        else addToast('Thêm thất bại', 'error');
+      }
     } catch { addToast('Lỗi kết nối, thử lại sau', 'error'); }
     finally { setLoading(false); }
   }
