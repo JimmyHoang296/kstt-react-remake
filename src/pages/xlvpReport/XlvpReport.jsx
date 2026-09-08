@@ -69,7 +69,7 @@ function applyFilter(rows, q) {
       else if (statusVal !== st) return false;
     }
     if (s) {
-      const hay = [r.sap, r.store, r.emp_name, r.kstt_submitted].join(' ').toLowerCase();
+      const hay = [r.sap, r.store, r.emp_name, r.kstt_submitted, r.email].join(' ').toLowerCase();
       if (!hay.includes(s)) return false;
     }
     return true;
@@ -385,7 +385,7 @@ function Nhom1Table({ rows, selected, onToggle, onToggleAll, onEdit }) {
               <input type="checkbox" checked={allChecked} ref={(el) => { if (el) el.indeterminate = someChecked; }}
                 onChange={() => onToggleAll(rows)} className="rounded" />
             </Th>
-            <Th>KSTT</Th><Th>Tuần</Th><Th>Mã CH</Th><Th>Tên CH</Th>
+            <Th>KSTT</Th><Th>Tiêu đề Email</Th><Th>Tuần</Th><Th>Mã CH</Th><Th>Tên CH</Th>
             <Th>Nhân viên</Th><Th>Chức danh</Th><Th>Nội dung vi phạm</Th>
             <Th>Giá trị</Th><Th>Thu hồi</Th><Th>Trạng thái</Th>
             <Th />
@@ -398,6 +398,7 @@ function Nhom1Table({ rows, selected, onToggle, onToggleAll, onEdit }) {
                 <input type="checkbox" checked={selected.has(r.id)} onChange={() => onToggle(r.id)} className="rounded" />
               </Td>
               <Td>{r.kstt_submitted}</Td>
+              <Td className="max-w-xs"><p className="line-clamp-2">{r.email}</p></Td>
               <Td>{r.week}</Td>
               <Td className="font-medium">{r.sap}</Td>
               <Td>{r.store}</Td>
@@ -430,7 +431,7 @@ function NhomKhacTable({ rows, selected, onToggle, onToggleAll, onEdit }) {
               <input type="checkbox" checked={allChecked} ref={(el) => { if (el) el.indeterminate = someChecked; }}
                 onChange={() => onToggleAll(rows)} className="rounded" />
             </Th>
-            <Th>KSTT</Th><Th>Tuần</Th><Th>Mã CH</Th><Th>Tên CH</Th>
+            <Th>KSTT</Th><Th>Tiêu đề Email</Th><Th>Tuần</Th><Th>Mã CH</Th><Th>Tên CH</Th>
             <Th>Nhân viên</Th><Th>Chức danh</Th><Th>Nội dung vi phạm</Th>
             <Th>Hình thức XLVP</Th><Th>Trạng thái</Th><Th>Ghi chú</Th>
             <Th />
@@ -443,6 +444,7 @@ function NhomKhacTable({ rows, selected, onToggle, onToggleAll, onEdit }) {
                 <input type="checkbox" checked={selected.has(r.id)} onChange={() => onToggle(r.id)} className="rounded" />
               </Td>
               <Td>{r.kstt_submitted}</Td>
+              <Td className="max-w-xs"><p className="line-clamp-2">{r.email}</p></Td>
               <Td>{r.week}</Td>
               <Td className="font-medium">{r.sap}</Td>
               <Td>{r.store}</Td>
@@ -670,7 +672,7 @@ const XlvpReport = () => {
             <div className="relative">
               <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
               <input name="search" value={q.search} onChange={handleQ}
-                placeholder="Mã CH, tên CH, nhân viên, KSTT..."
+                placeholder="Mã CH, tên CH, nhân viên, KSTT, tiêu đề email..."
                 className={`${INPUT} pl-8 w-full`} />
             </div>
           </div>

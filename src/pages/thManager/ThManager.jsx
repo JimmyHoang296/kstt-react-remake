@@ -40,7 +40,7 @@ function useFilter(rows, q) {
     const s = String(q.search || '').toLowerCase().trim();
     if (w && String(r.week || '') !== w) return false;
     if (s) {
-      const hay = [r.sap, r.store, r.emp_name, r.kstt_submitted].join(' ').toLowerCase();
+      const hay = [r.sap, r.store, r.emp_name, r.kstt_submitted, r.email].join(' ').toLowerCase();
       if (!hay.includes(s)) return false;
     }
     return true;
@@ -92,6 +92,7 @@ function Nhom1Table({ rows, showKstt, sort, onSort, canDelete, onDelete }) {
         <thead className="bg-gray-50 border-y border-gray-100">
           <tr>
             {showKstt && <Th field="kstt_submitted" sort={sort} onSort={onSort}>KSTT</Th>}
+            <Th field="email" sort={sort} onSort={onSort}>Tiêu đề Email</Th>
             <Th field="week" sort={sort} onSort={onSort}>Tuần</Th>
             <Th field="sap" sort={sort} onSort={onSort}>Mã CH</Th>
             <Th field="store" sort={sort} onSort={onSort}>Tên CH</Th>
@@ -108,6 +109,7 @@ function Nhom1Table({ rows, showKstt, sort, onSort, canDelete, onDelete }) {
           {rows.map((r) => (
             <tr key={r.id} className="hover:bg-gray-50">
               {showKstt && <Td>{r.kstt_submitted}</Td>}
+              <Td className="max-w-xs"><p className="line-clamp-2">{r.email}</p></Td>
               <Td>{r.week}</Td>
               <Td className="font-medium">{r.sap}</Td>
               <Td>{r.store}</Td>
@@ -146,6 +148,7 @@ function NhomKhacTable({ rows, showKstt, sort, onSort, canDelete, onDelete }) {
         <thead className="bg-gray-50 border-y border-gray-100">
           <tr>
             {showKstt && <Th field="kstt_submitted" sort={sort} onSort={onSort}>KSTT</Th>}
+            <Th field="email" sort={sort} onSort={onSort}>Tiêu đề Email</Th>
             <Th field="week" sort={sort} onSort={onSort}>Tuần</Th>
             <Th field="sap" sort={sort} onSort={onSort}>Mã CH</Th>
             <Th field="store" sort={sort} onSort={onSort}>Tên CH</Th>
@@ -162,6 +165,7 @@ function NhomKhacTable({ rows, showKstt, sort, onSort, canDelete, onDelete }) {
           {rows.map((r) => (
             <tr key={r.id} className="hover:bg-gray-50">
               {showKstt && <Td>{r.kstt_submitted}</Td>}
+              <Td className="max-w-xs"><p className="line-clamp-2">{r.email}</p></Td>
               <Td>{r.week}</Td>
               <Td className="font-medium">{r.sap}</Td>
               <Td>{r.store}</Td>
@@ -374,7 +378,7 @@ const ThManager = () => {
             <div className="relative">
               <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
               <input name="search" value={q.search} onChange={handleQ}
-                placeholder="Mã CH, tên CH, nhân viên, KSTT..."
+                placeholder="Mã CH, tên CH, nhân viên, KSTT, tiêu đề email..."
                 className={`${INPUT} pl-8 w-full`} />
             </div>
           </div>
