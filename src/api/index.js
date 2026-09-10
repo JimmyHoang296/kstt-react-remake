@@ -65,6 +65,12 @@ const CALENDAR_CFG = {
 const bangkokToday = () =>
   new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' });
 
+const monthsAgo = (n) => {
+  const d = new Date();
+  d.setMonth(d.getMonth() - n);
+  return d.toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' });
+};
+
 const PAGE_SIZE = 1000;
 async function fetchAllRows(makeQuery) {
   let from = 0;
@@ -119,11 +125,27 @@ async function getData(u) {
   const user = { id: u.user, name: u.name, role: u.role, hod: u.hod, director: u.director, isAdmin: u.is_admin || false, leadXlvp: u.lead_xlvp || false, leadGhiNhan: u.lead_ghi_nhan || false };
   const today = bangkokToday();
 
-  const makeCases = () => {
-    let q = supabase.from('case').select('*');
+  // Only the last 3 months of cases are needed for normal display, but cases
+  // still awaiting resolution ('Đang xử lý') must stay visible however old
+  // they are, so the two sets are fetched separately and merged below.
+  const makeRecentCases = () => {
+    let q = supabase.from('case').select('*').gte('startDate', monthsAgo(3));
     if (user.role === 'emp') q = q.eq('pic', user.name);
     else if (user.role === 'hod') q = q.eq('hod', user.name);
     return q;
+  };
+
+  const makeOpenCases = () => {
+    let q = supabase.from('case').select('*').eq('status', 'Đang xử lý');
+    if (user.role === 'emp') q = q.eq('pic', user.name);
+    else if (user.role === 'hod') q = q.eq('hod', user.name);
+    return q;
+  };
+
+  const mergeCases = (recent, open) => {
+    const byId = new Map(recent.map((c) => [c.id, c]));
+    open.forEach((c) => byId.set(c.id, c));
+    return [...byId.values()];
   };
 
   // Pre-fetch team members for hod so the inspection query can use kstt filter
@@ -150,8 +172,9 @@ async function getData(u) {
     return q;
   };
 
-  const [cases, inspections, calendar, visitPlan, empRes, setupRes, nhomRes] = await Promise.all([
-    fetchAllRows(makeCases),
+  const [recentCases, openCases, inspections, calendar, visitPlan, empRes, setupRes, nhomRes] = await Promise.all([
+    fetchAllRows(makeRecentCases),
+    fetchAllRows(makeOpenCases),
     fetchAllRows(makeInspections),
     fetchAllRows(() => supabase.from('calendar').select('*').ilike('user', user.id)),
     fetchAllRows(() => supabase.from('visit_plan').select('*').ilike('user', user.id).gte('date', today)),
@@ -159,6 +182,8 @@ async function getData(u) {
     supabase.from('setup').select('list,value,pos').order('pos'),
     supabase.from('nhom_ghi_nhan').select('*').order('STT'),
   ]);
+
+  const cases = mergeCases(recentCases, openCases);
 
   const emps = (empRes.data || []).map((r) => r.name).filter(Boolean);
 
