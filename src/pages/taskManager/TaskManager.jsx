@@ -111,6 +111,7 @@ const TaskManager = () => {
   useEffect(() => { setData((prev) => ({ ...prev, cases: tasks })); }, [tasks]);
 
   const COLS = [
+    { label: 'Mã sự vụ',   field: 'id'        },
     { label: 'Email',      field: 'email'     },
     { label: 'Trạng thái', field: 'status'    },
     { label: 'PIC',        field: 'pic'       },
@@ -230,6 +231,7 @@ const TaskManager = () => {
               <tbody className="divide-y divide-gray-100">
                 {paginatedTasks.map((task) => (
                   <tr key={task.id} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">{task.id}</td>
                     <td className="px-4 py-3 text-sm text-gray-700 max-w-xs truncate">{task.email}</td>
                     <td className="px-4 py-3"><StatusBadge status={task.status} /></td>
                     <td className="px-4 py-3 text-sm text-gray-700">{task.pic}</td>
@@ -250,7 +252,10 @@ const TaskManager = () => {
             {paginatedTasks.map((task) => (
               <div key={task.id} className="px-4 py-4 space-y-2">
                 <div className="flex items-start justify-between gap-2">
-                  <p className="text-sm text-gray-800 font-medium leading-snug line-clamp-2">{task.email}</p>
+                  <div>
+                    <p className="text-xs text-gray-400 mb-0.5">{task.id}</p>
+                    <p className="text-sm text-gray-800 font-medium leading-snug line-clamp-2">{task.email}</p>
+                  </div>
                   <button onClick={() => openModal(task)} className="shrink-0 p-1.5 rounded-lg text-indigo-600 hover:bg-indigo-50">
                     <Eye className="w-4 h-4" />
                   </button>

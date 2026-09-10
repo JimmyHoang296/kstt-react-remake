@@ -75,6 +75,12 @@ const TaskDetailModal = ({ data, task, onClose, onSave, onUpdate, onDelete }) =>
           <div>
             <p className={SECTION}>Thông tin chính</p>
             <div className="space-y-3">
+              {!isNew && (
+                <div>
+                  <label className={LABEL}>Mã sự vụ</label>
+                  <input value={formData.id || ''} readOnly className={`${INPUT} bg-gray-50 text-gray-500 cursor-not-allowed`} />
+                </div>
+              )}
               <div>
                 <label className={LABEL}>Tiêu đề email <span className="text-red-500">*</span></label>
                 <input name="email" value={formData.email} onChange={set} className={`${INPUT} ${errors.email ? 'border-red-400 ring-1 ring-red-400' : ''}`} />
