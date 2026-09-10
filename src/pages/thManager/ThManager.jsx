@@ -91,6 +91,7 @@ function Nhom1Table({ rows, showKstt, sort, onSort, canDelete, onDelete }) {
       <table className="min-w-full text-sm">
         <thead className="bg-gray-50 border-y border-gray-100">
           <tr>
+            <Th field="id" sort={sort} onSort={onSort}>ID</Th>
             {showKstt && <Th field="kstt_submitted" sort={sort} onSort={onSort}>KSTT</Th>}
             <Th field="email" sort={sort} onSort={onSort}>Tiêu đề Email</Th>
             <Th field="week" sort={sort} onSort={onSort}>Tuần</Th>
@@ -108,6 +109,7 @@ function Nhom1Table({ rows, showKstt, sort, onSort, canDelete, onDelete }) {
         <tbody className="divide-y divide-gray-100">
           {rows.map((r) => (
             <tr key={r.id} className="hover:bg-gray-50">
+              <Td>{r.id}</Td>
               {showKstt && <Td>{r.kstt_submitted}</Td>}
               <Td className="max-w-xs"><p className="line-clamp-2">{r.email}</p></Td>
               <Td>{r.week}</Td>
@@ -147,6 +149,7 @@ function NhomKhacTable({ rows, showKstt, sort, onSort, canDelete, onDelete }) {
       <table className="min-w-full text-sm">
         <thead className="bg-gray-50 border-y border-gray-100">
           <tr>
+            <Th field="id" sort={sort} onSort={onSort}>ID</Th>
             {showKstt && <Th field="kstt_submitted" sort={sort} onSort={onSort}>KSTT</Th>}
             <Th field="email" sort={sort} onSort={onSort}>Tiêu đề Email</Th>
             <Th field="week" sort={sort} onSort={onSort}>Tuần</Th>
@@ -164,6 +167,7 @@ function NhomKhacTable({ rows, showKstt, sort, onSort, canDelete, onDelete }) {
         <tbody className="divide-y divide-gray-100">
           {rows.map((r) => (
             <tr key={r.id} className="hover:bg-gray-50">
+              <Td>{r.id}</Td>
               {showKstt && <Td>{r.kstt_submitted}</Td>}
               <Td className="max-w-xs"><p className="line-clamp-2">{r.email}</p></Td>
               <Td>{r.week}</Td>
