@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { ChevronLeft, RefreshCw } from "lucide-react";
 import LoadingModal from "../../components/LoadingModal";
 import { api } from "../../api";
@@ -39,7 +39,8 @@ const PersonalCalendar = ({ weekdays, calendar, setCalendar, userId, userName })
     });
     setWeekData(newWeekData);
     setIsChanged(false);
-  }, [weekdays]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [weekdays[0].toDateString()]);
 
   useEffect(() => {
     setData((prev) => ({ ...prev, calendar }));
@@ -481,7 +482,7 @@ const Calendar = () => {
   const [currentWeekStart, setCurrentWeekStart] = useState(new Date());
   const [calendar, setCalendar] = useState(data.calendar);
 
-  const weekdays = getWeekDays(currentWeekStart);
+  const weekdays = useMemo(() => getWeekDays(currentWeekStart), [currentWeekStart]);
 
   const navigateWeek = (delta) => {
     const d = new Date(currentWeekStart);
