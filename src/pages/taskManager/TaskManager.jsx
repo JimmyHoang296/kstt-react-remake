@@ -30,10 +30,23 @@ const SortIcon = ({ field, sortField, sortDir }) => {
     : <ChevronDown className="w-3 h-3 inline ml-1" />;
 };
 
+const todayStr       = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' });
+const thisMonthStart = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`; };
+const prevMonth      = () => {
+  const d = new Date();
+  const first = new Date(d.getFullYear(), d.getMonth() - 1, 1);
+  const last  = new Date(d.getFullYear(), d.getMonth(), 0);
+  const fmt = (x) => x.toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' });
+  return { start: fmt(first), end: fmt(last) };
+};
+const daysAgo = (n) => { const d = new Date(); d.setDate(d.getDate() - n); return d.toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' }); };
+
 const taskFilterFn = (task, q) =>
-  (!q.email  || task.email?.toLowerCase().includes(q.email.toLowerCase()))  &&
-  (!q.pic    || task.pic?.toLowerCase().includes(q.pic.toLowerCase()))       &&
-  (!q.status || task.status?.toLowerCase().includes(q.status.toLowerCase()));
+  (!q.email    || task.email?.toLowerCase().includes(q.email.toLowerCase()))  &&
+  (!q.pic      || task.pic?.toLowerCase().includes(q.pic.toLowerCase()))       &&
+  (!q.status   || task.status?.toLowerCase().includes(q.status.toLowerCase())) &&
+  (!q.dateFrom || (task.startDate || '') >= q.dateFrom)                        &&
+  (!q.dateTo   || (task.startDate || '') <= q.dateTo);
 
 const sortedCases = (cases) =>
   [...cases].sort((a, b) => {
@@ -49,7 +62,7 @@ const TaskManager = () => {
 
   const {
     items: tasks, setItems: setTasks,
-    searchQuery, filteredItems,
+    searchQuery, setSearchQuery, filteredItems,
     currentPage, setCurrentPage,
     isModalOpen, selectedItem: selectedTask,
     loading, setLoading,
@@ -57,9 +70,21 @@ const TaskManager = () => {
     openModal, closeModal,
   } = useManagerPage({
     initialItems: sortedCases(data.cases),
-    initialSearch: { email: '', status: '', pic: '' },
+    initialSearch: { email: '', status: '', pic: '', dateFrom: '', dateTo: '' },
     filterFn: taskFilterFn,
   });
+
+  const setDateRange = (from, to) => {
+    setSearchQuery((q) => ({ ...q, dateFrom: from, dateTo: to }));
+    setCurrentPage(1);
+  };
+
+  const quickBtns = [
+    { label: 'Tháng này',   action: () => setDateRange(thisMonthStart(), todayStr()) },
+    { label: 'Tháng trước', action: () => { const pm = prevMonth(); setDateRange(pm.start, pm.end); } },
+    { label: '30 ngày',     action: () => setDateRange(daysAgo(30), todayStr()) },
+    { label: 'Tất cả',      action: () => setDateRange('', '') },
+  ];
 
   const [sortField, setSortField] = useState('startDate');
   const [sortDir,   setSortDir]   = useState('desc');
@@ -153,6 +178,21 @@ const TaskManager = () => {
           <div className="w-44">
             <label className="block text-xs font-medium text-gray-500 mb-1">PIC</label>
             <input name="pic" value={searchQuery.pic} onChange={handleSearchChange} placeholder="Tìm theo PIC..." className={INPUT} />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">Từ ngày</label>
+            <input type="date" name="dateFrom" value={searchQuery.dateFrom} onChange={handleSearchChange} className={INPUT} />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">Đến ngày</label>
+            <input type="date" name="dateTo" value={searchQuery.dateTo} onChange={handleSearchChange} className={INPUT} />
+          </div>
+          <div className="flex gap-2 flex-wrap">
+            {quickBtns.map(({ label, action }) => (
+              <button key={label} onClick={action} className="px-3 py-2 text-sm border border-gray-200 rounded-lg text-gray-600 hover:bg-white bg-white transition-colors">
+                {label}
+              </button>
+            ))}
           </div>
           <button onClick={resetSearch} className="inline-flex items-center gap-2 px-3 py-2 bg-white border border-gray-200 text-gray-600 text-sm rounded-lg hover:bg-gray-50 transition-colors">
             Xoá lọc
