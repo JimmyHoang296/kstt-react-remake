@@ -9,7 +9,18 @@ import ViolationItemModal from "./ViolationItemModal";
 
 const CHAIN_OPTIONS = ["Win Urban MB MT", "Win Urban MN", "Rural", "Winmart"];
 
-const CHUOI_MAP = { urban: 'Win Urban MN', rural: 'Rural', win: 'Winmart', winlife: 'Winmart' };
+const normalizeChuoi = (v) => (v || '').toLowerCase().replace(/,/g, '').replace(/\s+/g, ' ').trim();
+
+const CHUOI_MAP = {
+  'win urban mb mt': 'Win Urban MB MT',
+  'win urban mn': 'Win Urban MN',
+  'rural': 'Rural',
+  'winmart': 'Winmart',
+  // mã chuỗi kiểu cũ (dữ liệu import trước đây)
+  'urban': 'Win Urban MN',
+  'win': 'Winmart',
+  'winlife': 'Winmart',
+};
 
 const INSPECTION_TRANG_THAI_OPTIONS = ['Đang làm rõ', 'Đã hoàn thành'];
 
@@ -87,7 +98,7 @@ const ViolationDetailModal = ({ data, inspection, onClose, onCreated, onUpdated,
   };
 
   const applyStore = (s) => {
-    const chain = CHUOI_MAP[(s.chuoi || '').toLowerCase()] || s.chuoi?.toLowerCase() || '';
+    const chain = CHUOI_MAP[normalizeChuoi(s.chuoi)] || '';
     setFormData((p) => ({ ...p, store: s.siteName || '', qlkv: s.QLKV || '', gdv: s.GDV || '', chain }));
     setStoreResults([]);
   };
