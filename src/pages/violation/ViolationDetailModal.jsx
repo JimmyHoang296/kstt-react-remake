@@ -7,9 +7,9 @@ import useStore from "../../store/useStore";
 import LoadingModal from "../../components/LoadingModal";
 import ViolationItemModal from "./ViolationItemModal";
 
-const CHAIN_OPTIONS = ["WMT", "Rural", "Urban MN", "Urban MB"];
+const CHAIN_OPTIONS = ["Win Urban MB MT", "Win Urban MN", "Rural", "Winmart"];
 
-const CHUOI_MAP = { urban: 'Urban MN', rural: 'Rural', win: 'WMT', winlife: 'WMT' };
+const CHUOI_MAP = { urban: 'Win Urban MN', rural: 'Rural', win: 'Winmart', winlife: 'Winmart' };
 
 const INSPECTION_TRANG_THAI_OPTIONS = ['Đang làm rõ', 'Đã hoàn thành'];
 
