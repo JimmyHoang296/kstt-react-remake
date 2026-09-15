@@ -40,7 +40,7 @@ const CASE_CFG = {
 };
 
 const INSPECTION_CFG = {
-  cols: ['id', 'user', 'kstt', 'sap', 'store', 'qlkv', 'gdv', 'chain', 'ngayKiemTra', 'batCapVH', 'trang_thai'],
+  cols: ['id', 'user', 'kstt', 'sap', 'store', 'qlkv', 'gdv', 'chain', 'ngayKiemTra', 'batCapVH', 'trang_thai', 'case_id'],
   dates: ['ngayKiemTra'],
 };
 
@@ -266,6 +266,15 @@ export const api = {
   deleteInspection: async (id) => {
     const { error } = await supabase.from('inspections').delete().eq('id', id);
     return error ? { success: false, message: error.message } : { success: true };
+  },
+  getInspectionsByCase: async (caseId) => {
+    const { data, error } = await supabase
+      .from('inspections')
+      .select('*')
+      .eq('case_id', caseId)
+      .order('ngayKiemTra', { ascending: false });
+    if (error) return { success: false, message: error.message };
+    return { success: true, data: data || [] };
   },
 
   // ---- Violation items ----

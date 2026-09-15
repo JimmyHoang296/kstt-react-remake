@@ -61,11 +61,12 @@ const ViolationDetailModal = ({ data, inspection, onClose, onCreated, onUpdated,
   const [formData, setFormData] = useState(() => {
     if (!inspection?.id) {
       return {
-        sap: '', store: '', chain: '', qlkv: '', gdv: '',
+        sap: '', store: '', chain: '', qlkv: '', gdv: '', case_id: '',
         ngayKiemTra: today,
         kstt: isEmp ? data.user.name : '',
         thuTin: '',
         trang_thai: 'Đang làm rõ',
+        ...inspection,
       };
     }
     // map batCapVH → thuTin for existing records; default trang_thai for old records
@@ -316,6 +317,13 @@ const ViolationDetailModal = ({ data, inspection, onClose, onCreated, onUpdated,
                 className={`w-full px-2 py-1.5 border rounded text-sm bg-white ${!canEdit ? 'opacity-60 cursor-not-allowed' : ''}`}>
                 {INSPECTION_TRANG_THAI_OPTIONS.map((o) => <option key={o}>{o}</option>)}
               </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Mã sự vụ liên quan</label>
+              <input type="text" name="case_id" value={formData.case_id || ''} onChange={handleChange}
+                readOnly={!canEdit}
+                placeholder="VD: I123"
+                className={`w-full px-2 py-1.5 border rounded text-sm ${!canEdit ? 'bg-gray-50 text-gray-500' : ''}`} />
             </div>
             <div className="col-span-4">
               <label className="block text-sm font-semibold text-gray-700 mb-1">Ghi nhận thêm</label>

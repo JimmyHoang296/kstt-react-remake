@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
-import { Save, Trash2, X } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Plus, Save, Trash2, X } from 'lucide-react';
 import { getTodayDateString, toDateInputValue } from '../../assets/helpers';
+import { api } from '../../api';
+import ViolationDetailModal from '../violation/ViolationDetailModal';
 
 const INPUT  = "w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent";
 const LABEL  = "block text-xs font-medium text-gray-500 mb-1";
@@ -41,6 +43,24 @@ const TaskDetailModal = ({ data, task, onClose, onSave, onUpdate, onDelete }) =>
   const [errors, setErrors] = useState({});
 
   const isNew = !task?.id;
+
+  // ---- Biên bản liên quan (inspections linked via case_id) ----
+  const [relatedInspections, setRelatedInspections] = useState([]);
+  const [loadingRelated, setLoadingRelated] = useState(false);
+  const [violationModalData, setViolationModalData] = useState(null);
+
+  useEffect(() => {
+    if (!task?.id) return;
+    setLoadingRelated(true);
+    api.getInspectionsByCase(task.id).then((r) => {
+      if (r.success) setRelatedInspections(r.data);
+      setLoadingRelated(false);
+    });
+  }, [task?.id]);
+
+  const handleInspectionCreated = (insp) => setRelatedInspections((p) => [insp, ...p]);
+  const handleInspectionUpdated = (insp) => setRelatedInspections((p) => p.map((v) => (v.id === insp.id ? insp : v)));
+  const handleInspectionDeleted = (id) => setRelatedInspections((p) => p.filter((v) => v.id !== id));
 
   const set = (e) => {
     const { name, value } = e.target;
@@ -191,6 +211,41 @@ const TaskDetailModal = ({ data, task, onClose, onSave, onUpdate, onDelete }) =>
               </div>
             </div>
           </div>
+
+          {/* Section: Biên bản liên quan */}
+          {!isNew && (
+            <div>
+              <div className="flex items-center justify-between pb-1.5 border-b border-gray-100 mb-3">
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                  Biên bản liên quan {relatedInspections.length > 0 && `(${relatedInspections.length})`}
+                </p>
+                <button
+                  onClick={() => setViolationModalData({ case_id: task.id, sap: formData.sap, store: formData.store })}
+                  className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-indigo-600 text-white text-xs rounded-md hover:bg-indigo-700"
+                >
+                  <Plus size={12} /> Thêm biên bản
+                </button>
+              </div>
+              {loadingRelated ? (
+                <p className="text-xs text-gray-400">Đang tải...</p>
+              ) : relatedInspections.length === 0 ? (
+                <p className="text-xs text-gray-400 italic">Chưa có biên bản nào liên quan đến sự vụ này.</p>
+              ) : (
+                <div className="border border-gray-100 rounded-lg divide-y divide-gray-100">
+                  {relatedInspections.map((insp) => (
+                    <button key={insp.id} type="button" onClick={() => setViolationModalData(insp)}
+                      className="w-full text-left px-3 py-2 text-xs hover:bg-gray-50 flex items-center gap-3">
+                      <span className="font-medium text-gray-700 shrink-0">{insp.id}</span>
+                      <span className="text-gray-500 truncate flex-1">{insp.store}</span>
+                      <span className="text-gray-400 shrink-0">{insp.chain}</span>
+                      <span className="text-gray-400 shrink-0">{toDateInputValue(insp.ngayKiemTra)}</span>
+                      <span className="text-gray-500 shrink-0">{insp.trang_thai}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Footer actions */}
@@ -212,6 +267,17 @@ const TaskDetailModal = ({ data, task, onClose, onSave, onUpdate, onDelete }) =>
           </div>
         </div>
       </div>
+
+      {violationModalData && (
+        <ViolationDetailModal
+          data={data}
+          inspection={violationModalData}
+          onClose={() => setViolationModalData(null)}
+          onCreated={handleInspectionCreated}
+          onUpdated={handleInspectionUpdated}
+          onDeleted={handleInspectionDeleted}
+        />
+      )}
     </div>
   );
 };
