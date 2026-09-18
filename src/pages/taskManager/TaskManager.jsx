@@ -111,11 +111,13 @@ const TaskManager = () => {
   useEffect(() => { setData((prev) => ({ ...prev, cases: tasks })); }, [tasks]);
 
   const COLS = [
-    { label: 'Mã sự vụ',   field: 'id'        },
-    { label: 'Email',      field: 'email'     },
-    { label: 'Trạng thái', field: 'status'    },
-    { label: 'PIC',        field: 'pic'       },
-    { label: 'Ngày giao',  field: 'startDate' },
+    { label: 'Mã sự vụ',          field: 'id'        },
+    { label: 'Email',             field: 'email'     },
+    { label: 'Trạng thái',        field: 'status'    },
+    { label: 'Nguồn thông tin',   field: 'source'    },
+    { label: 'Tóm tắt thông tin', field: 'summarize' },
+    { label: 'PIC',               field: 'pic'       },
+    { label: 'Ngày giao',         field: 'startDate' },
   ];
 
   async function handleUpdate(updated) {
@@ -234,6 +236,8 @@ const TaskManager = () => {
                     <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">{task.id}</td>
                     <td className="px-4 py-3 text-sm text-gray-700 max-w-xs truncate">{task.email}</td>
                     <td className="px-4 py-3"><StatusBadge status={task.status} /></td>
+                    <td className="px-4 py-3 text-sm text-gray-700 max-w-[140px] truncate" title={task.source}>{task.source}</td>
+                    <td className="px-4 py-3 text-sm text-gray-700 max-w-xs truncate" title={task.summarize}>{task.summarize}</td>
                     <td className="px-4 py-3 text-sm text-gray-700">{task.pic}</td>
                     <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">{toDateInputValue(task.startDate)}</td>
                     <td className="px-4 py-3 text-center">
@@ -265,6 +269,12 @@ const TaskManager = () => {
                   <span>{task.pic}</span>
                   <span>{toDateInputValue(task.startDate)}</span>
                 </div>
+                {task.source && (
+                  <p className="text-xs text-gray-500"><span className="font-medium text-gray-400">Nguồn: </span>{task.source}</p>
+                )}
+                {task.summarize && (
+                  <p className="text-xs text-gray-500 line-clamp-2"><span className="font-medium text-gray-400">Tóm tắt: </span>{task.summarize}</p>
+                )}
               </div>
             ))}
           </div>

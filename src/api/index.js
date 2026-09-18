@@ -40,7 +40,7 @@ const CASE_CFG = {
 };
 
 const INSPECTION_CFG = {
-  cols: ['id', 'user', 'kstt', 'sap', 'store', 'qlkv', 'gdv', 'chain', 'ngayKiemTra', 'batCapVH', 'trang_thai', 'case_id'],
+  cols: ['id', 'user', 'kstt', 'sap', 'store', 'qlkv', 'gdv', 'chain', 'ngayKiemTra', 'batCapVH', 'trang_thai'],
   dates: ['ngayKiemTra'],
 };
 
@@ -267,15 +267,6 @@ export const api = {
     const { error } = await supabase.from('inspections').delete().eq('id', id);
     return error ? { success: false, message: error.message } : { success: true };
   },
-  getInspectionsByCase: async (caseId) => {
-    const { data, error } = await supabase
-      .from('inspections')
-      .select('*')
-      .eq('case_id', caseId)
-      .order('ngayKiemTra', { ascending: false });
-    if (error) return { success: false, message: error.message };
-    return { success: true, data: data || [] };
-  },
 
   // ---- Violation items ----
   getViolationsByInspection: async (inspectionId) => {
@@ -365,6 +356,19 @@ export const api = {
     if (endDate)   q = q.lte('approved_date', endDate);
     const { data, error } = await q;
     return error ? { success: false, message: error.message } : { success: true, data: data || [] };
+  },
+
+  // ---- TH XLVP records linked to a case (sự vụ) ----
+  getThRecordsByCase: async (caseId) => {
+    const [r1, r2] = await Promise.all([
+      supabase.from('th_nhom_1').select('*').eq('case_id', caseId).order('approved_date', { ascending: false }),
+      supabase.from('th_nhom_khac').select('*').eq('case_id', caseId).order('approved_date', { ascending: false }),
+    ]);
+    if (r1.error) return { success: false, message: r1.error.message };
+    if (r2.error) return { success: false, message: r2.error.message };
+    const nhom1 = (r1.data || []).map((r) => ({ ...r, group: 'Nhóm 1' }));
+    const nhomKhac = (r2.data || []).map((r) => ({ ...r, group: 'Nhóm khác' }));
+    return { success: true, data: [...nhom1, ...nhomKhac] };
   },
   updateThNhom1: async (id, fields) => {
     const { error } = await supabase.from('th_nhom_1').update(fields).eq('id', id);
