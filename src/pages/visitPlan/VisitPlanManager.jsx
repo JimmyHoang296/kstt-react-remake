@@ -38,6 +38,7 @@ const VisitPlanManager = () => {
   const data     = useStore((state) => state.data);
   const setData  = useStore((state) => state.setData);
   const addToast = useStore((state) => state.addToast);
+  const refreshKey = useStore((state) => state.refreshKey);
 
   const {
     items: plans, setItems: setPlans,
@@ -51,6 +52,7 @@ const VisitPlanManager = () => {
     initialItems: data.visitPlan || [],
     initialSearch: { site: '', status: '' },
     filterFn: planFilterFn,
+    refreshKey,
   });
 
   const [sortField, setSortField] = useState('date');

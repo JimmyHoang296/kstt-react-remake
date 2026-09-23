@@ -59,6 +59,7 @@ const TaskManager = () => {
   const data    = useStore((state) => state.data);
   const setData = useStore((state) => state.setData);
   const addToast = useStore((state) => state.addToast);
+  const refreshKey = useStore((state) => state.refreshKey);
 
   const {
     items: tasks, setItems: setTasks,
@@ -72,6 +73,7 @@ const TaskManager = () => {
     initialItems: sortedCases(data.cases),
     initialSearch: { email: '', status: '', pic: '', dateFrom: '', dateTo: '' },
     filterFn: taskFilterFn,
+    refreshKey,
   });
 
   const setDateRange = (from, to) => {

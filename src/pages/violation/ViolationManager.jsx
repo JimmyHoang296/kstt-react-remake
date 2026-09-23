@@ -41,6 +41,7 @@ const ViolationManager = () => {
   const data     = useStore((state) => state.data);
   const setData  = useStore((state) => state.setData);
   const addToast = useStore((state) => state.addToast);
+  const refreshKey = useStore((state) => state.refreshKey);
 
   const { role, name: userName } = data.user || {};
   const defaultKstt = role === 'emp' ? (userName || '') : '';
@@ -57,6 +58,7 @@ const ViolationManager = () => {
     initialItems: data.inspections || [],
     initialSearch: { sap: '', store: '', kstt: defaultKstt, trangThai: '', dateFrom: thisMonthStart(), dateTo: todayStr() },
     filterFn,
+    refreshKey,
   });
 
   const setDateRange = (from, to) => {

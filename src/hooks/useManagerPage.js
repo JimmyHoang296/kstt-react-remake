@@ -8,8 +8,10 @@ import { useEffect, useMemo, useState } from 'react';
  * @param {Object} config.initialSearch  - Initial search state object (keys match filter fields)
  * @param {Function} config.filterFn     - (item, searchQuery) => boolean
  * @param {number} [config.pageSize=20]
+ * @param {*} [config.refreshKey]        - When this value changes, `items` is reset from
+ *                                         `initialItems` (e.g. after a global data refresh).
  */
-export function useManagerPage({ initialItems, initialSearch, filterFn, pageSize = 20 }) {
+export function useManagerPage({ initialItems, initialSearch, filterFn, pageSize = 20, refreshKey }) {
   const [items, setItems] = useState(initialItems);
   const [searchQuery, setSearchQuery] = useState(initialSearch);
   const [filteredItems, setFilteredItems] = useState(initialItems);
@@ -17,6 +19,14 @@ export function useManagerPage({ initialItems, initialSearch, filterFn, pageSize
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
   const [loading, setLoading] = useState(false);
+
+  // Re-sync local items with the freshly loaded source data (e.g. after the
+  // header "Refresh" button reloads everything into the store).
+  useEffect(() => {
+    if (refreshKey === undefined) return;
+    setItems(initialItems);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refreshKey]);
 
   useEffect(() => {
     setFilteredItems(items.filter((item) => filterFn(item, searchQuery)));

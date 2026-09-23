@@ -474,6 +474,7 @@ const DirectorCalendar = ({ weekdays, directorName }) => {
 
 const Calendar = () => {
   const data = useStore((state) => state.data);
+  const refreshKey = useStore((state) => state.refreshKey);
   const { id: userId, name, role } = data.user;
   const isHod = role === "hod";
   const isDirector = role === "director";
@@ -481,6 +482,9 @@ const Calendar = () => {
   const [activeTab, setActiveTab] = useState(isDirector ? "all" : "personal");
   const [currentWeekStart, setCurrentWeekStart] = useState(new Date());
   const [calendar, setCalendar] = useState(data.calendar);
+
+  // Re-sync with freshly loaded data after the header "Refresh" button reloads the store.
+  useEffect(() => { setCalendar(data.calendar); }, [refreshKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const weekdays = useMemo(() => getWeekDays(currentWeekStart), [currentWeekStart]);
 
