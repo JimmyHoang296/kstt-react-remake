@@ -1,8 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { ChevronDown, ChevronUp, ChevronsUpDown, FileText, Search, Trash2, X } from 'lucide-react';
 import { api } from '../../api';
 import useStore from '../../store/useStore';
 import Pagination from '../../components/Pagination';
+import { toDateInputValue } from '../../assets/helpers';
 
 const PAGE_SIZE = 20;
 
@@ -83,8 +85,85 @@ function DeleteConfirmModal({ row, onConfirm, onCancel, loading }) {
   );
 }
 
+// ─── Detail View Modal ─────────────────────────────────────────────────────────
+function Field({ label, value, full }) {
+  return (
+    <div className={full ? 'col-span-2' : ''}>
+      <p className="text-xs font-medium text-gray-400 mb-0.5">{label}</p>
+      <p className="text-sm text-gray-800 whitespace-pre-wrap break-words">{value || value === 0 ? value : '—'}</p>
+    </div>
+  );
+}
+
+function DetailRecordModal({ record, group, onClose }) {
+  const isNhom1 = group === 'nhom1';
+  const title = isNhom1 ? 'Chi tiết biên bản — Nhóm 1' : 'Chi tiết biên bản — Nhóm Khác';
+  const status = isNhom1 ? record.Note : record.status;
+  return (
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50" onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 shrink-0">
+          <div className="flex items-center gap-2">
+            <h3 className="text-lg font-bold text-gray-900">{title}</h3>
+            {status && (
+              <span className={`text-xs px-2 py-0.5 rounded-full ${BADGE[status] || 'bg-gray-100 text-gray-600'}`}>{status}</span>
+            )}
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        <div className="overflow-y-auto flex-1 px-6 py-5 space-y-5">
+          <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+            <Field label="ID" value={record.id} />
+            <Field label="Tuần" value={record.week} />
+            <Field label="Ngày duyệt" value={toDateInputValue(record.approved_date)} />
+            <Field label="KSTT phụ trách" value={record.kstt_submitted} />
+            <Field label="Tiêu đề Email" value={record.email} full />
+            <Field label="Mã CH" value={record.sap} />
+            <Field label="Tên CH" value={record.store} />
+            <Field label="Nhân viên" value={record.emp_name} />
+            <Field label="Chức danh" value={record.emp_title} />
+            {isNhom1 ? (
+              <>
+                <Field label="Mã số NV" value={record.emp_id} />
+                <Field label="Xếp hạng" value={record.emp_rank} />
+                <Field label="Nguồn thông tin" value={record.source} />
+                <Field label="QLKV" value={record.QLKV ?? record.qlkv} />
+                <Field label="Phân loại vi phạm" value={record.violation_type} />
+                <Field label="GDV" value={record.GDV ?? record.gdv} />
+                <Field label="Giá trị thất thoát" value={formatMoney(record.loss_value)} />
+                <Field label="Giá trị thu hồi" value={formatMoney(record.recover_value)} />
+                <Field label="Ngày phát hiện" value={toDateInputValue(record.discovery_date)} />
+                <Field label="Ngày hoàn thành" value={toDateInputValue(record.finished_date)} />
+                <Field label="Nội dung giải trình" value={record.clarification_detail} full />
+                <Field label="Ghi chú GDV" value={record.GDVNote ?? record.gdv_note} full />
+              </>
+            ) : (
+              <>
+                <Field label="Nhóm kỷ luật" value={record.disciplinary_group} />
+                <Field label="Lỗi" value={record.loi ?? record.Lỗi} />
+                <Field label="Hình thức XLVP" value={record.disciplinary_action} full />
+              </>
+            )}
+            <Field label="Nội dung vi phạm" value={record.violation_text} full />
+            <Field label="Ghi chú" value={isNhom1 ? record.Note : record.NOTE} full />
+          </div>
+        </div>
+        <div className="flex items-center justify-end px-6 py-4 border-t border-gray-100 shrink-0 bg-gray-50 rounded-b-2xl">
+          <button onClick={onClose} className="px-4 py-2 text-sm text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors">
+            Đóng
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const formatMoney = (v) => (v != null && v !== '' ? Number(v).toLocaleString() + ' đ' : '—');
+
 // ─── Nhóm 1 Table ─────────────────────────────────────────────────────────────
-function Nhom1Table({ rows, showKstt, sort, onSort, canDelete, onDelete }) {
+function Nhom1Table({ rows, showKstt, sort, onSort, canDelete, onDelete, onView, highlightId, rowRefs }) {
   if (rows.length === 0) return <Empty />;
   return (
     <div className="overflow-x-auto">
@@ -108,7 +187,10 @@ function Nhom1Table({ rows, showKstt, sort, onSort, canDelete, onDelete }) {
         </thead>
         <tbody className="divide-y divide-gray-100">
           {rows.map((r) => (
-            <tr key={r.id} className="hover:bg-gray-50">
+            <tr key={r.id} ref={(el) => rowRefs && (rowRefs.current[`nhom1-${r.id}`] = el)}
+              onDoubleClick={() => onView && onView(r)}
+              title="Nháy đúp để xem chi tiết"
+              className={`hover:bg-gray-50 cursor-pointer transition-colors ${highlightId === `nhom1-${r.id}` ? 'bg-indigo-50 ring-1 ring-inset ring-indigo-300' : ''}`}>
               <Td>{r.id}</Td>
               {showKstt && <Td>{r.kstt_submitted}</Td>}
               <Td className="max-w-xs"><p className="line-clamp-2">{r.email}</p></Td>
@@ -127,7 +209,7 @@ function Nhom1Table({ rows, showKstt, sort, onSort, canDelete, onDelete }) {
               </Td>
               {canDelete && (
                 <td className="px-2 py-2.5 align-top">
-                  <button onClick={() => onDelete(r)}
+                  <button onClick={(e) => { e.stopPropagation(); onDelete(r); }}
                     className="p-1 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded transition-colors">
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
@@ -142,7 +224,7 @@ function Nhom1Table({ rows, showKstt, sort, onSort, canDelete, onDelete }) {
 }
 
 // ─── Nhóm Khác Table ──────────────────────────────────────────────────────────
-function NhomKhacTable({ rows, showKstt, sort, onSort, canDelete, onDelete }) {
+function NhomKhacTable({ rows, showKstt, sort, onSort, canDelete, onDelete, onView, highlightId, rowRefs }) {
   if (rows.length === 0) return <Empty />;
   return (
     <div className="overflow-x-auto">
@@ -166,7 +248,10 @@ function NhomKhacTable({ rows, showKstt, sort, onSort, canDelete, onDelete }) {
         </thead>
         <tbody className="divide-y divide-gray-100">
           {rows.map((r) => (
-            <tr key={r.id} className="hover:bg-gray-50">
+            <tr key={r.id} ref={(el) => rowRefs && (rowRefs.current[`khac-${r.id}`] = el)}
+              onDoubleClick={() => onView && onView(r)}
+              title="Nháy đúp để xem chi tiết"
+              className={`hover:bg-gray-50 cursor-pointer transition-colors ${highlightId === `khac-${r.id}` ? 'bg-indigo-50 ring-1 ring-inset ring-indigo-300' : ''}`}>
               <Td>{r.id}</Td>
               {showKstt && <Td>{r.kstt_submitted}</Td>}
               <Td className="max-w-xs"><p className="line-clamp-2">{r.email}</p></Td>
@@ -185,7 +270,7 @@ function NhomKhacTable({ rows, showKstt, sort, onSort, canDelete, onDelete }) {
               <Td>{r.NOTE}</Td>
               {canDelete && (
                 <td className="px-2 py-2.5 align-top">
-                  <button onClick={() => onDelete(r)}
+                  <button onClick={(e) => { e.stopPropagation(); onDelete(r); }}
                     className="p-1 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded transition-colors">
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
@@ -236,6 +321,12 @@ const ThManager = () => {
   const emps = data.emps || [];
   const showKstt = role === 'hod' || role === 'director';
   const canDelete = role === 'hod' || role === 'director';
+
+  const location = useLocation();
+  const navigate = useNavigate();
+  const rowRefs = useRef({});
+  const [viewing, setViewing] = useState(null); // { record, group }
+  const [highlightKey, setHighlightKey] = useState(null); // e.g. "nhom1-123"
 
   const [deleteTarget, setDeleteTarget] = useState(null); // { row, table }
   const [deleting, setDeleting] = useState(false);
@@ -288,6 +379,31 @@ const ThManager = () => {
 
   useEffect(() => { fetchData(); }, [refreshKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Mở trực tiếp 1 biên bản khi được điều hướng tới từ trang khác (vd: nháy đúp ở modal Sự vụ)
+  useEffect(() => {
+    const openRecord = location.state?.openRecord;
+    if (!openRecord) return;
+    const { id, group } = openRecord;
+    setActiveTab(group);
+    const fn = group === 'nhom1' ? api.getThNhom1ById : api.getThNhomKhacById;
+    fn(id).then((r) => {
+      if (r.success && r.data) {
+        setViewing({ record: r.data, group });
+        setHighlightKey(`${group}-${id}`);
+      }
+    });
+    navigate(location.pathname, { replace: true, state: {} });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (!highlightKey) return;
+    const el = rowRefs.current[highlightKey];
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    const t = setTimeout(() => setHighlightKey(null), 4000);
+    return () => clearTimeout(t);
+  }, [highlightKey, rows1, rowsKhac, activeTab]);
+
   const applyRange = (s, e) => { setStart(s); setEnd(e); fetchData(s, e); setPage1(1); setPageK(1); };
   const applyCustom = () => { fetchData(startDate, endDate); setPage1(1); setPageK(1); };
 
@@ -339,6 +455,13 @@ const ThManager = () => {
           loading={deleting}
           onConfirm={handleDelete}
           onCancel={() => setDeleteTarget(null)}
+        />
+      )}
+      {viewing && (
+        <DetailRecordModal
+          record={viewing.record}
+          group={viewing.group}
+          onClose={() => setViewing(null)}
         />
       )}
       {/* Date range */}
@@ -429,7 +552,9 @@ const ThManager = () => {
                 </p>
               </div>
               <Nhom1Table rows={paged1} showKstt={showKstt} sort={sort1} onSort={handleSort1}
-                canDelete={canDelete} onDelete={(row) => setDeleteTarget({ row, table: 'nhom1' })} />
+                canDelete={canDelete} onDelete={(row) => setDeleteTarget({ row, table: 'nhom1' })}
+                onView={(row) => setViewing({ record: row, group: 'nhom1' })}
+                highlightId={highlightKey} rowRefs={rowRefs} />
               <div className="px-6 pt-3">
                 <Pagination totalPages={total1} currentPage={page1} setCurrentPage={setPage1} />
               </div>
@@ -442,7 +567,9 @@ const ThManager = () => {
                 </p>
               </div>
               <NhomKhacTable rows={pagedK} showKstt={showKstt} sort={sortK} onSort={handleSortK}
-                canDelete={canDelete} onDelete={(row) => setDeleteTarget({ row, table: 'khac' })} />
+                canDelete={canDelete} onDelete={(row) => setDeleteTarget({ row, table: 'khac' })}
+                onView={(row) => setViewing({ record: row, group: 'khac' })}
+                highlightId={highlightKey} rowRefs={rowRefs} />
               <div className="px-6 pt-3">
                 <Pagination totalPages={totalK} currentPage={pageK} setCurrentPage={setPageK} />
               </div>

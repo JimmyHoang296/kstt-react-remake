@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Save, Trash2, X } from 'lucide-react';
 import { getTodayDateString, toDateInputValue } from '../../assets/helpers';
 import { api } from '../../api';
@@ -6,6 +7,14 @@ import { api } from '../../api';
 const INPUT  = "w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent";
 const LABEL  = "block text-xs font-medium text-gray-500 mb-1";
 const SECTION = "text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 pb-1.5 border-b border-gray-100";
+
+const TH_BADGE = {
+  'Đã trình':  'bg-green-100 text-green-700',
+  'Chờ trình': 'bg-yellow-100 text-yellow-700',
+  'Đang xử lý':'bg-blue-100 text-blue-700',
+};
+
+const formatMoney = (v) => (v != null && v !== '' ? Number(v).toLocaleString() + ' đ' : '—');
 
 const typeList = [
   'N1_Gian lận trục lợi',
@@ -31,6 +40,7 @@ const typeList = [
 ];
 
 const TaskDetailModal = ({ data, task, onClose, onSave, onUpdate, onDelete }) => {
+  const navigate = useNavigate();
   const isEmp = data?.user?.role === 'emp';
   const [formData, setFormData] = useState(task || {
     id: '', email: '', rank: '', status: 'Đang xử lý', type: '', source: '',
@@ -55,6 +65,13 @@ const TaskDetailModal = ({ data, task, onClose, onSave, onUpdate, onDelete }) =>
       setLoadingRelated(false);
     });
   }, [task?.id]);
+
+  const openInThManager = (r) => {
+    navigate('/th-management', {
+      state: { openRecord: { id: r.id, group: r.group === 'Nhóm 1' ? 'nhom1' : 'khac' } },
+    });
+    onClose();
+  };
 
   const set = (e) => {
     const { name, value } = e.target;
@@ -217,18 +234,46 @@ const TaskDetailModal = ({ data, task, onClose, onSave, onUpdate, onDelete }) =>
               ) : relatedThRecords.length === 0 ? (
                 <p className="text-xs text-gray-400 italic">Chưa có biên bản TH XLVP nào liên quan đến sự vụ này.</p>
               ) : (
-                <div className="border border-gray-100 rounded-lg divide-y divide-gray-100">
-                  {relatedThRecords.map((r) => (
-                    <div key={`${r.group}-${r.id}`} className="px-3 py-2 text-xs flex items-center gap-3">
-                      <span className="font-medium text-gray-700 shrink-0">{r.group}</span>
-                      <span className="text-gray-500 truncate flex-1">{r.sap} · {r.store}</span>
-                      <span className="text-gray-400 shrink-0">{r.emp_name}</span>
-                      <span className="text-gray-400 shrink-0">{toDateInputValue(r.approved_date)}</span>
-                    </div>
-                  ))}
+                <div className="space-y-2">
+                  {relatedThRecords.map((r) => {
+                    const status = r.group === 'Nhóm 1' ? r.Note : r.status;
+                    return (
+                      <div
+                        key={`${r.group}-${r.id}`}
+                        onDoubleClick={() => openInThManager(r)}
+                        title="Nháy đúp để mở biên bản này tại trang TH XLVP"
+                        className="border border-gray-100 rounded-lg px-3 py-2.5 text-xs cursor-pointer hover:border-indigo-200 hover:bg-indigo-50/40 transition-colors"
+                      >
+                        <div className="flex items-center justify-between gap-2 mb-1.5">
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold text-gray-700">{r.group}</span>
+                            <span className="text-gray-400">·</span>
+                            <span className="text-gray-500">Tuần {r.week || '—'}</span>
+                            {status && (
+                              <span className={`px-1.5 py-0.5 rounded-full ${TH_BADGE[status] || 'bg-gray-100 text-gray-600'}`}>{status}</span>
+                            )}
+                          </div>
+                          <span className="text-gray-400 shrink-0">{toDateInputValue(r.approved_date)}</span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-gray-600">
+                          <div><span className="text-gray-400">Mã CH/Tên CH:</span> {r.sap} · {r.store}</div>
+                          <div><span className="text-gray-400">Nhân viên:</span> {r.emp_name} {r.emp_title ? `(${r.emp_title})` : ''}</div>
+                          <div><span className="text-gray-400">KSTT phụ trách:</span> {r.kstt_submitted || '—'}</div>
+                          {r.group === 'Nhóm 1' ? (
+                            <div><span className="text-gray-400">Giá trị / Thu hồi:</span> {formatMoney(r.loss_value)} / {formatMoney(r.recover_value)}</div>
+                          ) : (
+                            <div className="col-span-2"><span className="text-gray-400">Hình thức XLVP:</span> {r.disciplinary_action || '—'}</div>
+                          )}
+                        </div>
+                        {r.violation_text && (
+                          <p className="mt-1.5 text-gray-600 line-clamp-2">{r.violation_text}</p>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
-              <p className="text-xs text-gray-400 mt-2">Xem/sửa chi tiết đầy đủ tại trang <span className="font-medium">TH XLVP</span>.</p>
+              <p className="text-xs text-gray-400 mt-2">Nháy đúp vào một biên bản để mở chi tiết tại trang <span className="font-medium">TH XLVP</span>.</p>
             </div>
           )}
         </div>

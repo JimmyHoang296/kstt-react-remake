@@ -358,6 +358,15 @@ export const api = {
     return error ? { success: false, message: error.message } : { success: true, data: data || [] };
   },
 
+  getThNhom1ById: async (id) => {
+    const { data, error } = await supabase.from('th_nhom_1').select('*').eq('id', id).maybeSingle();
+    return error ? { success: false, message: error.message } : { success: true, data };
+  },
+  getThNhomKhacById: async (id) => {
+    const { data, error } = await supabase.from('th_nhom_khac').select('*').eq('id', id).maybeSingle();
+    return error ? { success: false, message: error.message } : { success: true, data };
+  },
+
   // ---- TH XLVP records linked to a case (sự vụ) ----
   getThRecordsByCase: async (caseId) => {
     const [r1, r2] = await Promise.all([
