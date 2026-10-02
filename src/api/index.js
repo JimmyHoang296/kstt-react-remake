@@ -603,6 +603,8 @@ export const api = {
         GDC:           toStr(r.gdc),
         kstt:          toStr(r.kstt),
         chuoi:         toStr(r.chuoi),
+        'TBP An ninh': toStr(r.tbp_an_ninh),
+        'CV An ninh':  toStr(r.cv_an_ninh),
       }))
       .filter((r) => r.store);
 
@@ -637,6 +639,8 @@ export const api = {
       lat: r.lat,
       long: r.long,
       chuoi: r.chuoi,
+      tbpAnNinh: r['TBP An ninh'],
+      cvAnNinh: r['CV An ninh'],
     }));
     return { result };
   },

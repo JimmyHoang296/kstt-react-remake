@@ -324,7 +324,12 @@ const SearchStore = () => {
                   <div className="flex items-start gap-2">
                     <Store className="w-4 h-4 text-indigo-500 shrink-0 mt-0.5" />
                     <div>
-                      <p className="text-sm font-semibold text-gray-800 leading-snug">{shop.siteName}</p>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <p className="text-sm font-semibold text-gray-800 leading-snug">{shop.siteName}</p>
+                        {shop.chuoi === 'Winmart' && (
+                          <span className="text-[10px] font-medium bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full shrink-0">Siêu thị</span>
+                        )}
+                      </div>
                       <p className="text-xs text-indigo-600 font-medium">{shop.site}</p>
                     </div>
                   </div>
@@ -371,6 +376,8 @@ const SearchStore = () => {
                   <InfoRow label="QLKV" value={shop.QLKV} />
                   <InfoRow label="GĐV"  value={shop.GDV}  />
                   <InfoRow label="KSTT" value={shop.KSTT} />
+                  <InfoRow label="TBP An ninh" value={shop.tbpAnNinh} />
+                  <InfoRow label="CV An ninh"  value={shop.cvAnNinh}  />
                 </div>
 
                 {shop.lat && shop.long && (

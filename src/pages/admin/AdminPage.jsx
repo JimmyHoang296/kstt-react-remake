@@ -570,13 +570,68 @@ function SetupEditor() {
 
 // ─── Import dữ liệu ───────────────────────────────────────────────────────────
 
-const STORE_COLS = ['store','store_name','lat','long','address','cht','sdt_cht','qlkv','sdt_qlkv','qlkv_id','gdv','gdv_id','gdm','gdm_id','gdc','gdc_id','kstt'];
+const STORE_COLS = ['store','store_name','lat','long','address','cht','sdt_cht','qlkv','sdt_qlkv','qlkv_id','gdv','gdv_id','gdm','gdm_id','gdc','gdc_id','kstt','tbp_an_ninh','cv_an_ninh'];
+
+// Lấy phần trước @ của email làm mã nhân viên (vd: hanhhh2@winmart... -> hanhhh2), khớp cách đặt id trong dữ liệu cũ.
+const emailLocal = (email) => {
+  const s = String(email ?? '').trim();
+  const at = s.indexOf('@');
+  return at > 0 ? s.slice(0, at).toLowerCase() : (s || '');
+};
+
+// Sheet "Minimart": dòng 1 là nhóm cột gộp, header thật ở dòng 2 -> range: 1
+const mapMinimartRow = (r) => ({
+  store:        String(r['Mã SAP'] ?? '').trim(),
+  store_name:   r['Tên cửa hàng'],
+  lat:          r['Vĩ độ'],
+  long:         r['Kinh độ'],
+  address:      r['Địa chỉ CH'],
+  cht:          r['CHT/CHP kiêm nghiệm'],
+  sdt_cht:      r['SĐT di động'],
+  qlkv:         r['QLKV'],
+  sdt_qlkv:     r['SĐT QLKV'],
+  qlkv_id:      emailLocal(r['Email QLKV phụ trách phê duyệt']),
+  gdv:          r['GĐV'],
+  gdv_id:       emailLocal(r['Email GĐV']),
+  gdm:          r['GĐM'],
+  gdm_id:       emailLocal(r['Email GĐM']),
+  gdc:          r['GĐC'],
+  gdc_id:       emailLocal(r['Email GĐC']),
+  kstt:         r['KSTT phụ trách tháng mới'],
+  chuoi:        r['Mô hình đặc thù'],
+  tbp_an_ninh:  r['TBP An ninh'],
+  cv_an_ninh:   r['CV An ninh'],
+});
+
+// Sheet "Winmart" (siêu thị): không có QLKV/GĐM riêng, dùng "Giám đốc Miền/GĐV" cho vai trò GĐV.
+const mapWinmartRow = (r) => ({
+  store:        String(r['Mã siêu thị'] ?? '').trim(),
+  store_name:   r['Tên Siêu thị'],
+  lat:          '',
+  long:         '',
+  address:      r['Địa chỉ Siêu thị'],
+  cht:          r['Tên GĐST'],
+  sdt_cht:      r['Số Điện Thoại GĐST'],
+  qlkv:         '',
+  sdt_qlkv:     '',
+  qlkv_id:      '',
+  gdv:          r['Giám đốc Miền/GĐV'],
+  gdv_id:       '',
+  gdm:          '',
+  gdm_id:       '',
+  gdc:          '',
+  gdc_id:       '',
+  kstt:         r['KSTT phụ trách'],
+  chuoi:        'Winmart',
+  tbp_an_ninh:  r['TBP ANCS'],
+  cv_an_ninh:   r['ANCS phụ trách'],
+});
 
 function ImportEditor() {
   const addToast = useStore((s) => s.addToast);
   const fileRef  = useRef(null);
 
-  const [preview,   setPreview]   = useState(null);   // { rows, count, fileName }
+  const [preview,   setPreview]   = useState(null);   // { rows, count, countCH, countST, fileName }
   const [importing, setImporting] = useState(false);
   const [done,      setDone]      = useState(null);    // count after success
 
@@ -587,14 +642,37 @@ function ImportEditor() {
     const reader = new FileReader();
     reader.onload = (ev) => {
       try {
-        const wb   = XLSX.read(ev.target.result, { type: 'array' });
-        const ws   = wb.Sheets[wb.SheetNames[0]];
-        const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
+        const wb = XLSX.read(ev.target.result, { type: 'array' });
+
+        let rows, countCH = 0, countST = 0;
+
+        if (wb.SheetNames.includes('Minimart')) {
+          // Mẫu mới: "Storelist và phân công" — sheet Minimart (CH) + Winmart (siêu thị)
+          const mnmRows = XLSX.utils.sheet_to_json(wb.Sheets['Minimart'], { defval: '', range: 1 })
+            .filter((r) => r['Mã SAP'])
+            .map(mapMinimartRow);
+
+          const wmRows = wb.SheetNames.includes('Winmart')
+            ? XLSX.utils.sheet_to_json(wb.Sheets['Winmart'], { defval: '' })
+                .filter((r) => r['Mã siêu thị'])
+                .map(mapWinmartRow)
+            : [];
+
+          rows = [...mnmRows, ...wmRows];
+          countCH = mnmRows.length;
+          countST = wmRows.length;
+        } else {
+          // Mẫu cũ: Storelist.xlsx — 1 sheet, header đã đúng tên cột
+          const ws = wb.Sheets[wb.SheetNames[0]];
+          rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
+          countCH = rows.length;
+        }
+
         if (!rows.length || !('store' in rows[0])) {
           addToast('File không đúng định dạng — thiếu cột "store"', 'error');
           return;
         }
-        setPreview({ rows, count: rows.length, fileName: file.name });
+        setPreview({ rows, count: rows.length, countCH, countST, fileName: file.name });
       } catch {
         addToast('Không đọc được file', 'error');
       }
@@ -634,10 +712,10 @@ function ImportEditor() {
             </div>
             <p className="text-xs text-gray-400 mt-0.5">
               Thay thế toàn bộ bảng <code className="bg-gray-100 px-1 rounded">stores</code> bằng file mới.
-              File mẫu: <span className="font-medium text-gray-600">Storelist.xlsx</span>
+              File mẫu: <span className="font-medium text-gray-600">Storelist và phân công T10.2026.xlsx</span> (sheet Minimart + Winmart), hoặc Storelist.xlsx cũ.
             </p>
             <p className="text-xs text-gray-400 mt-0.5">
-              Cột cần có: {STORE_COLS.join(' · ')}
+              Cột sau import: {STORE_COLS.join(' · ')}
             </p>
           </div>
         </div>
@@ -655,6 +733,11 @@ function ImportEditor() {
             <span className="text-sm text-gray-700">
               <span className="font-medium text-indigo-600">{preview.fileName}</span>
               {' — '}<span className="font-semibold">{preview.count.toLocaleString()}</span> dòng
+              {preview.countST > 0 && (
+                <span className="text-gray-400">
+                  {' '}({preview.countCH.toLocaleString()} CH · {preview.countST.toLocaleString()} siêu thị)
+                </span>
+              )}
             </span>
           )}
 
