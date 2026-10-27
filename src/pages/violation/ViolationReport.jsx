@@ -1,8 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { BarChart2, ChevronDown, ChevronRight, Download, FileText, Search, X } from 'lucide-react';
+import { BarChart2, ChevronDown, ChevronRight, Download, FileText, MapPin, Search, X } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { api } from '../../api';
 import useStore from '../../store/useStore';
+import MonthlyVisitPlanTab from './MonthlyVisitPlanTab';
 
 // ─── Date helpers ─────────────────────────────────────────────────────────────
 const todayStr = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' });
@@ -656,26 +657,32 @@ const ViolationReport = () => {
         <NhomBreakdownCard inspections={filtered} />
       </div>
 
-      {/* Tab selector — only for hod/director/leadGhiNhan */}
-      {showKstt && (
-        <div className="flex gap-1 bg-gray-100 p-1 rounded-xl w-fit">
-          <button
-            onClick={() => setActiveTab('ch')}
-            className={`px-4 py-1.5 text-sm font-medium rounded-lg transition-colors ${activeTab === 'ch' ? 'bg-white shadow-sm text-indigo-600' : 'text-gray-500 hover:text-gray-700'}`}
-          >
-            Theo cửa hàng
-          </button>
+      {/* Tab selector */}
+      <div className="flex gap-1 bg-gray-100 p-1 rounded-xl w-fit">
+        <button
+          onClick={() => setActiveTab('ch')}
+          className={`px-4 py-1.5 text-sm font-medium rounded-lg transition-colors ${activeTab === 'ch' ? 'bg-white shadow-sm text-indigo-600' : 'text-gray-500 hover:text-gray-700'}`}
+        >
+          Theo cửa hàng
+        </button>
+        {showKstt && (
           <button
             onClick={() => setActiveTab('kstt')}
             className={`px-4 py-1.5 text-sm font-medium rounded-lg transition-colors ${activeTab === 'kstt' ? 'bg-white shadow-sm text-indigo-600' : 'text-gray-500 hover:text-gray-700'}`}
           >
             Theo KSTT
           </button>
-        </div>
-      )}
+        )}
+        <button
+          onClick={() => setActiveTab('plan')}
+          className={`flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium rounded-lg transition-colors ${activeTab === 'plan' ? 'bg-white shadow-sm text-indigo-600' : 'text-gray-500 hover:text-gray-700'}`}
+        >
+          <MapPin size={14} /> Kế hoạch tháng
+        </button>
+      </div>
 
       {/* Tab: Theo cửa hàng */}
-      {(!showKstt || activeTab === 'ch') && (
+      {activeTab === 'ch' && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100">
             <div className="flex items-center gap-2 px-6 py-4 border-b border-gray-100">
               <BarChart2 size={18} className="text-indigo-500" />
@@ -724,6 +731,13 @@ const ViolationReport = () => {
         ) : (
           <KsttStatsTable inspections={filtered} ksttHodMap={ksttHodMap} />
         )
+      )}
+
+      {/* Tab: Kế hoạch tháng */}
+      {activeTab === 'plan' && (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+          <MonthlyVisitPlanTab />
+        </div>
       )}
     </div>
   );
