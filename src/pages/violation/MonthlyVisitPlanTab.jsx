@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import * as XLSX from 'xlsx';
-import { MapContainer, TileLayer, CircleMarker, Tooltip as LeafletTooltip, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, useMap } from 'react-leaflet';
+import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Upload, Trash2, CheckCircle2 } from 'lucide-react';
 import { api } from '../../api';
@@ -94,6 +95,53 @@ const FitBounds = ({ points }) => {
       map.fitBounds(points, { padding: [32, 32] });
     }
   }, [points, map]);
+  return null;
+};
+
+function buildTooltipEl(r) {
+  const div = document.createElement('div');
+  div.style.fontSize = '12px';
+  const strong = document.createElement('strong');
+  strong.textContent = `${r.sap} — ${r.store.store_name || ''}`;
+  div.appendChild(strong);
+  if (r.store.address) {
+    div.appendChild(document.createElement('br'));
+    div.appendChild(document.createTextNode(r.store.address));
+  }
+  if (r.pic) {
+    div.appendChild(document.createElement('br'));
+    div.appendChild(document.createTextNode(`PIC: ${r.pic}`));
+  }
+  div.appendChild(document.createElement('br'));
+  const status = document.createElement('span');
+  status.style.color = r.visited ? '#16a34a' : '#d97706';
+  status.textContent = r.visited ? 'Đã đi' : 'Chưa đi';
+  div.appendChild(status);
+  return div;
+}
+
+// Vẽ marker trực tiếp bằng Leaflet (thay vì <CircleMarker> khai báo của
+// react-leaflet) — react-leaflet v5 dưới React 19 StrictMode có thể không gắn
+// lại layer con sau lần mount thứ 2, khiến bản đồ fit đúng vị trí nhưng không
+// hiện chấm nào. Quản lý layer thủ công qua useMap() tránh được lỗi này.
+const PlanMarkers = ({ rows }) => {
+  const map = useMap();
+  useEffect(() => {
+    const group = L.layerGroup();
+    rows.forEach((r) => {
+      L.circleMarker([Number(r.store.lat), Number(r.store.long)], {
+        radius: 9,
+        color: r.visited ? '#16a34a' : '#d97706',
+        fillColor: r.visited ? '#22c55e' : '#f59e0b',
+        fillOpacity: 0.85,
+        weight: 2,
+      })
+        .bindTooltip(buildTooltipEl(r))
+        .addTo(group);
+    });
+    group.addTo(map);
+    return () => { map.removeLayer(group); };
+  }, [rows, map]);
   return null;
 };
 
@@ -328,30 +376,7 @@ const MonthlyVisitPlanTab = () => {
                 attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
               />
               <FitBounds points={points} />
-              {mapRows.map((r) => (
-                <CircleMarker
-                  key={r.id}
-                  center={[Number(r.store.lat), Number(r.store.long)]}
-                  radius={9}
-                  pathOptions={{
-                    color: r.visited ? '#16a34a' : '#d97706',
-                    fillColor: r.visited ? '#22c55e' : '#f59e0b',
-                    fillOpacity: 0.85,
-                    weight: 2,
-                  }}
-                >
-                  <LeafletTooltip>
-                    <div className="text-xs">
-                      <p className="font-semibold">{r.sap} — {r.store.store_name}</p>
-                      <p>{r.store.address}</p>
-                      {r.pic && <p>PIC: {r.pic}</p>}
-                      <p className={r.visited ? 'text-green-600' : 'text-amber-600'}>
-                        {r.visited ? 'Đã đi' : 'Chưa đi'}
-                      </p>
-                    </div>
-                  </LeafletTooltip>
-                </CircleMarker>
-              ))}
+              <PlanMarkers rows={mapRows} />
             </MapContainer>
           </div>
           <p className="text-xs text-gray-400 mt-2">
