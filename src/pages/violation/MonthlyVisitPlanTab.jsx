@@ -6,6 +6,7 @@ import { Upload, MapPin, Trash2, CheckCircle2 } from 'lucide-react';
 import { api } from '../../api';
 import useStore from '../../store/useStore';
 import LoadingModal from '../../components/LoadingModal';
+import { findProvince, shortProvinceName } from '../../assets/provinceLookup';
 
 const todayMonthStr = () => {
   const d = new Date();
@@ -36,6 +37,48 @@ function parseMonthCell(v) {
   if (m) return `${m[2]}-${m[1].padStart(2, '0')}-01`;
   return null;
 }
+
+const GroupSummaryTable = ({ title, labelHeader, rows }) => {
+  const totals = rows.reduce((a, r) => ({ planned: a.planned + r.planned, visited: a.visited + r.visited }), { planned: 0, visited: 0 });
+  return (
+    <div className="border border-gray-200 rounded-xl overflow-hidden">
+      <div className="px-4 py-2.5 bg-gray-50 border-b border-gray-100">
+        <h4 className="text-sm font-semibold text-gray-700">{title}</h4>
+      </div>
+      <div className="max-h-72 overflow-y-auto">
+        <table className="min-w-full text-sm">
+          <thead className="bg-gray-50 sticky top-0">
+            <tr>
+              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">{labelHeader}</th>
+              <th className="px-4 py-2 text-right text-xs font-medium text-gray-500">Kế hoạch</th>
+              <th className="px-4 py-2 text-right text-xs font-medium text-gray-500">Đã đi</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100">
+            {rows.length === 0 ? (
+              <tr><td colSpan={3} className="px-4 py-4 text-center text-gray-400 text-xs">Không có dữ liệu</td></tr>
+            ) : rows.map((r) => (
+              <tr key={r.label}>
+                <td className="px-4 py-1.5 text-gray-700">{r.label}</td>
+                <td className="px-4 py-1.5 text-right font-medium text-gray-700">{r.planned}</td>
+                <td className="px-4 py-1.5 text-right text-green-600 font-medium">{r.visited}</td>
+              </tr>
+            ))}
+          </tbody>
+          {rows.length > 0 && (
+            <tfoot>
+              <tr className="bg-gray-50 font-semibold border-t border-gray-200">
+                <td className="px-4 py-1.5 text-gray-700">Tổng</td>
+                <td className="px-4 py-1.5 text-right text-gray-800">{totals.planned}</td>
+                <td className="px-4 py-1.5 text-right text-green-700">{totals.visited}</td>
+              </tr>
+            </tfoot>
+          )}
+        </table>
+      </div>
+    </div>
+  );
+};
 
 const FitBounds = ({ points }) => {
   const map = useMap();
@@ -97,9 +140,24 @@ const MonthlyVisitPlanTab = () => {
     return set;
   }, [data.inspections, monthStart, monthEnd]);
 
+  // Tỉnh/thành suy ra từ lat/long qua ranh giới 34 tỉnh/thành (tham khảo dự án
+  // "Danh sach BHX") — chỉ tính 1 lần mỗi khi danh sách store thay đổi.
+  const provinceBySap = useMemo(() => {
+    const m = {};
+    Object.values(storeInfo).forEach((s) => {
+      if (s.lat && s.long) m[s.store] = findProvince(s.lat, s.long);
+    });
+    return m;
+  }, [storeInfo]);
+
   const rowsWithStatus = useMemo(
-    () => planRows.map((r) => ({ ...r, visited: visitedSaps.has(r.sap), store: storeInfo[r.sap] })),
-    [planRows, visitedSaps, storeInfo]
+    () => planRows.map((r) => ({
+      ...r,
+      visited: visitedSaps.has(r.sap),
+      store: storeInfo[r.sap],
+      province: provinceBySap[r.sap] || null,
+    })),
+    [planRows, visitedSaps, storeInfo, provinceBySap]
   );
 
   const mapRows = rowsWithStatus.filter((r) => r.store?.lat && r.store?.long);
@@ -107,6 +165,30 @@ const MonthlyVisitPlanTab = () => {
   const visitedCount = rowsWithStatus.filter((r) => r.visited).length;
 
   const points = mapRows.map((r) => [Number(r.store.lat), Number(r.store.long)]);
+
+  const byKstt = useMemo(() => {
+    const m = new Map();
+    rowsWithStatus.forEach((r) => {
+      const key = r.pic || 'Chưa phân công';
+      if (!m.has(key)) m.set(key, { label: key, planned: 0, visited: 0 });
+      const e = m.get(key);
+      e.planned += 1;
+      if (r.visited) e.visited += 1;
+    });
+    return [...m.values()].sort((a, b) => b.planned - a.planned);
+  }, [rowsWithStatus]);
+
+  const byProvince = useMemo(() => {
+    const m = new Map();
+    rowsWithStatus.forEach((r) => {
+      const key = r.province ? shortProvinceName(r.province) : 'Không rõ địa phương';
+      if (!m.has(key)) m.set(key, { label: key, planned: 0, visited: 0 });
+      const e = m.get(key);
+      e.planned += 1;
+      if (r.visited) e.visited += 1;
+    });
+    return [...m.values()].sort((a, b) => b.planned - a.planned);
+  }, [rowsWithStatus]);
 
   const handleFile = (e) => {
     const file = e.target.files[0];
@@ -228,52 +310,59 @@ const MonthlyVisitPlanTab = () => {
         </div>
       </div>
 
-      {/* Map */}
-      <div className="px-6">
-        {mapRows.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-gray-400 border border-gray-100 rounded-xl">
-            <MapPin className="w-10 h-10 mb-3 opacity-40" />
-            <p className="text-sm">Chưa có CH nào trong kế hoạch có tọa độ để hiển thị</p>
-          </div>
-        ) : (
-          <div className="rounded-xl overflow-hidden border border-gray-200" style={{ height: 420 }}>
-            <MapContainer center={points[0]} zoom={12} style={{ height: '100%', width: '100%' }}>
-              <TileLayer
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-              />
-              <FitBounds points={points} />
-              {mapRows.map((r) => (
-                <CircleMarker
-                  key={r.id}
-                  center={[Number(r.store.lat), Number(r.store.long)]}
-                  radius={9}
-                  pathOptions={{
-                    color: r.visited ? '#16a34a' : '#d97706',
-                    fillColor: r.visited ? '#22c55e' : '#f59e0b',
-                    fillOpacity: 0.85,
-                    weight: 2,
-                  }}
-                >
-                  <LeafletTooltip>
-                    <div className="text-xs">
-                      <p className="font-semibold">{r.sap} — {r.store.store_name}</p>
-                      <p>{r.store.address}</p>
-                      {r.pic && <p>PIC: {r.pic}</p>}
-                      <p className={r.visited ? 'text-green-600' : 'text-amber-600'}>
-                        {r.visited ? 'Đã đi' : 'Chưa đi'}
-                      </p>
-                    </div>
-                  </LeafletTooltip>
-                </CircleMarker>
-              ))}
-            </MapContainer>
-          </div>
-        )}
-        <p className="text-xs text-gray-400 mt-2">
-          Xanh = đã đi (có biên bản ghi nhận trong tháng) · Vàng = chưa đi.
-          {noCoordCount > 0 && ` ${noCoordCount} CH chưa có tọa độ nên không hiển thị trên bản đồ.`}
-        </p>
+      {/* Trái: tổng hợp theo KSTT / theo địa phương — Phải: bản đồ */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 px-6">
+        <div className="space-y-5">
+          <GroupSummaryTable title="Tổng hợp theo KSTT" labelHeader="KSTT" rows={byKstt} />
+          <GroupSummaryTable title="Tổng hợp theo địa phương" labelHeader="Tỉnh/Thành" rows={byProvince} />
+        </div>
+
+        <div>
+          {mapRows.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 text-gray-400 border border-gray-100 rounded-xl h-full">
+              <MapPin className="w-10 h-10 mb-3 opacity-40" />
+              <p className="text-sm">Chưa có CH nào trong kế hoạch có tọa độ để hiển thị</p>
+            </div>
+          ) : (
+            <div className="rounded-xl overflow-hidden border border-gray-200" style={{ height: 500 }}>
+              <MapContainer center={points[0]} zoom={12} style={{ height: '100%', width: '100%' }}>
+                <TileLayer
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                />
+                <FitBounds points={points} />
+                {mapRows.map((r) => (
+                  <CircleMarker
+                    key={r.id}
+                    center={[Number(r.store.lat), Number(r.store.long)]}
+                    radius={9}
+                    pathOptions={{
+                      color: r.visited ? '#16a34a' : '#d97706',
+                      fillColor: r.visited ? '#22c55e' : '#f59e0b',
+                      fillOpacity: 0.85,
+                      weight: 2,
+                    }}
+                  >
+                    <LeafletTooltip>
+                      <div className="text-xs">
+                        <p className="font-semibold">{r.sap} — {r.store.store_name}</p>
+                        <p>{r.store.address}</p>
+                        {r.pic && <p>PIC: {r.pic}</p>}
+                        <p className={r.visited ? 'text-green-600' : 'text-amber-600'}>
+                          {r.visited ? 'Đã đi' : 'Chưa đi'}
+                        </p>
+                      </div>
+                    </LeafletTooltip>
+                  </CircleMarker>
+                ))}
+              </MapContainer>
+            </div>
+          )}
+          <p className="text-xs text-gray-400 mt-2">
+            Xanh = đã đi (có biên bản ghi nhận trong tháng) · Vàng = chưa đi.
+            {noCoordCount > 0 && ` ${noCoordCount} CH chưa có tọa độ nên không hiển thị trên bản đồ.`}
+          </p>
+        </div>
       </div>
 
       {/* Detail table */}
