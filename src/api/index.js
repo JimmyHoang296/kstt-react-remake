@@ -537,18 +537,18 @@ export const api = {
   },
 
   // ---- Monthly Store Visit Plan (kế hoạch đi kiểm tra CH theo tháng + bản đồ) ----
-  // month: 'YYYY-MM-01' string. Scoped the same way as inspections (emp: own
-  // name; hod: own team; admin/leadGhiNhan: everything).
+  // month: 'YYYY-MM-01' string. Scoped exactly like getInspectionsForReport
+  // above (same report page): emp sees own name, hod sees own team, anyone
+  // else (director/admin/leadGhiNhan) sees everything.
   getMonthlyVisitPlan: async (month, user) => {
     let q = supabase.from('store_visit_plan').select('*').eq('month', month);
-    if (user && !user.leadGhiNhan && !user.isAdmin) {
-      if (user.role === 'hod' && user.hod) {
+    if (user && !user.leadGhiNhan) {
+      if (user.role === 'emp') {
+        q = q.ilike('pic', user.name || '');
+      } else if (user.role === 'hod' && user.hod) {
         const { data: teamRows } = await supabase.from('app_user').select('name').eq('hod', user.hod);
         const names = [...new Set([user.name, ...(teamRows || []).map((r) => r.name).filter(Boolean)])];
         q = q.in('pic', names);
-      } else {
-        // emp, or any other/unrecognized role: least-privilege default — own rows only.
-        q = q.ilike('pic', user.name || '');
       }
     }
     const { data, error } = await q;
