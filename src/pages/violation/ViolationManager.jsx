@@ -1,11 +1,12 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { ChevronDown, ChevronUp, ChevronsUpDown, Eye, FileText, Plus } from "lucide-react";
+import { ChevronDown, ChevronUp, ChevronsUpDown, Eye, FileText, MapPin, Plus } from "lucide-react";
 import { api } from "../../api";
 import { useManagerPage } from "../../hooks/useManagerPage";
 import useStore from "../../store/useStore";
 import Pagination from "../../components/Pagination";
 import LoadingModal from "../../components/LoadingModal";
 import ViolationDetailModal from "./ViolationDetailModal";
+import MonthlyVisitPlanTab from "./MonthlyVisitPlanTab";
 
 const INPUT = "border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent";
 
@@ -75,6 +76,7 @@ const ViolationManager = () => {
 
   const [sortField, setSortField] = useState('ngayKiemTra');
   const [sortDir,   setSortDir]   = useState('desc');
+  const [activeTab, setActiveTab] = useState('list');
   const PER_PAGE = 20;
 
   const handleSort = (field) => {
@@ -150,6 +152,28 @@ const ViolationManager = () => {
         </div>
       </div>
 
+      {/* Tabs */}
+      <div className="px-6 pt-4">
+        <div className="flex gap-1 bg-gray-100 p-1 rounded-xl w-fit">
+          <button
+            onClick={() => setActiveTab('list')}
+            className={`px-4 py-1.5 text-sm font-medium rounded-lg transition-colors ${activeTab === 'list' ? 'bg-white shadow-sm text-indigo-600' : 'text-gray-500 hover:text-gray-700'}`}
+          >
+            Danh sách ghi nhận
+          </button>
+          <button
+            onClick={() => setActiveTab('plan')}
+            className={`flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium rounded-lg transition-colors ${activeTab === 'plan' ? 'bg-white shadow-sm text-indigo-600' : 'text-gray-500 hover:text-gray-700'}`}
+          >
+            <MapPin size={14} /> Kế hoạch tháng
+          </button>
+        </div>
+      </div>
+
+      {activeTab === 'plan' ? (
+        <MonthlyVisitPlanTab />
+      ) : (
+      <>
       {/* Search */}
       <div className="px-6 py-3 border-b border-gray-100">
         <div className="flex flex-wrap gap-3 items-end">
@@ -251,6 +275,8 @@ const ViolationManager = () => {
             <Pagination totalPages={totalPages} currentPage={currentPage} setCurrentPage={setCurrentPage} />
           </div>
         </>
+      )}
+      </>
       )}
 
       {isModalOpen && (

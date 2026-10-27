@@ -56,6 +56,13 @@ const VISITPLAN_CFG = {
   dates: ['date'],
 };
 
+// Monthly store-visit plan (kế hoạch đi kiểm tra CH theo tháng) — separate
+// from VISITPLAN_CFG above, which is an unrelated "data dump registration" feature.
+const MONTHLY_VISIT_PLAN_CFG = {
+  cols: ['month', 'sap', 'pic', 'user'],
+  dates: ['month'],
+};
+
 const CALENDAR_CFG = {
   cols: ['date', 'user', 'name', 'work', 'storeNumber', 'martNumber'],
   nums: ['storeNumber', 'martNumber'],
@@ -527,6 +534,45 @@ export const api = {
   deleteVisitPlan: async (id) => {
     const { error } = await supabase.from('visit_plan').delete().eq('id', id);
     return error ? { success: false, message: error.message } : { success: true };
+  },
+
+  // ---- Monthly Store Visit Plan (kế hoạch đi kiểm tra CH theo tháng + bản đồ) ----
+  // month: 'YYYY-MM-01' string. Scoped the same way as inspections (emp: own
+  // name; hod: own team; admin/leadGhiNhan: everything).
+  getMonthlyVisitPlan: async (month, user) => {
+    let q = supabase.from('store_visit_plan').select('*').eq('month', month);
+    if (user && !user.leadGhiNhan && !user.isAdmin) {
+      if (user.role === 'emp') {
+        q = q.ilike('pic', user.name);
+      } else if (user.role === 'hod' && user.hod) {
+        const { data: teamRows } = await supabase.from('app_user').select('name').eq('hod', user.hod);
+        const names = [...new Set([user.name, ...(teamRows || []).map((r) => r.name).filter(Boolean)])];
+        q = q.in('pic', names);
+      }
+    }
+    const { data, error } = await q;
+    return error ? { success: false, message: error.message } : { success: true, data: data || [] };
+  },
+  // rows: [{ month, sap, pic }]; upserts on (month, sap) so re-uploading the
+  // same month only adds/corrects rows instead of wiping other teams' plans.
+  importMonthlyVisitPlan: async (rows) => {
+    if (!rows?.length) return { success: true, count: 0 };
+    const payload = rows.map((r) => sanitize(r, MONTHLY_VISIT_PLAN_CFG));
+    const { error } = await supabase.from('store_visit_plan').upsert(payload, { onConflict: 'month,sap' });
+    return error ? { success: false, message: error.message } : { success: true, count: payload.length };
+  },
+  deleteMonthlyVisitPlanRow: async (id) => {
+    const { error } = await supabase.from('store_visit_plan').delete().eq('id', id);
+    return error ? { success: false, message: error.message } : { success: true };
+  },
+  // Lookup coords/name for a set of store codes (for plotting on the map).
+  getStoresBySap: async (saps) => {
+    if (!saps?.length) return { success: true, data: [] };
+    const { data, error } = await supabase
+      .from('stores')
+      .select('store, store_name, address, lat, long, chuoi')
+      .in('store', saps);
+    return error ? { success: false, message: error.message } : { success: true, data: data || [] };
   },
 
   // ---- Calendar ----

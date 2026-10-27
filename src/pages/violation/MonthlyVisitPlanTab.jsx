@@ -1,0 +1,326 @@
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import * as XLSX from 'xlsx';
+import { MapContainer, TileLayer, CircleMarker, Tooltip as LeafletTooltip, useMap } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
+import { Upload, MapPin, Trash2, CheckCircle2 } from 'lucide-react';
+import { api } from '../../api';
+import useStore from '../../store/useStore';
+import LoadingModal from '../../components/LoadingModal';
+
+const todayMonthStr = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+};
+
+const monthRange = (monthStr) => {
+  const [y, m] = monthStr.split('-').map(Number);
+  const start = `${monthStr}-01`;
+  const lastDay = new Date(y, m, 0).getDate();
+  const end = `${monthStr}-${String(lastDay).padStart(2, '0')}`;
+  return { start, end };
+};
+
+// Accepts a JS Date (when the sheet column is Excel date-formatted) or text
+// like "2026-11", "11/2026", "Tháng 11/2026".
+function parseMonthCell(v) {
+  if (v instanceof Date && !isNaN(v)) {
+    return `${v.getFullYear()}-${String(v.getMonth() + 1).padStart(2, '0')}-01`;
+  }
+  const s = String(v ?? '').trim();
+  if (!s) return null;
+  let m = s.match(/^(\d{4})[-/](\d{1,2})/);
+  if (m) return `${m[1]}-${m[2].padStart(2, '0')}-01`;
+  m = s.match(/^(\d{1,2})[-/](\d{4})$/);
+  if (m) return `${m[2]}-${m[1].padStart(2, '0')}-01`;
+  m = s.match(/th[áa]ng\s*(\d{1,2})[/-](\d{4})/i);
+  if (m) return `${m[2]}-${m[1].padStart(2, '0')}-01`;
+  return null;
+}
+
+const FitBounds = ({ points }) => {
+  const map = useMap();
+  useEffect(() => {
+    if (points.length === 0) return;
+    if (points.length === 1) {
+      map.setView(points[0], 15);
+    } else {
+      map.fitBounds(points, { padding: [32, 32] });
+    }
+  }, [points, map]);
+  return null;
+};
+
+const MonthlyVisitPlanTab = () => {
+  const data     = useStore((state) => state.data);
+  const addToast = useStore((state) => state.addToast);
+
+  const [month, setMonth] = useState(todayMonthStr());
+  const [planRows, setPlanRows] = useState([]);
+  const [storeInfo, setStoreInfo] = useState({}); // sap -> { store_name, address, lat, long }
+  const [loading, setLoading] = useState(false);
+  const [preview, setPreview] = useState(null); // { rows, fileName }
+  const [importing, setImporting] = useState(false);
+  const fileRef = useRef(null);
+
+  const load = async (m) => {
+    setLoading(true);
+    try {
+      const { start } = monthRange(m);
+      const planRes = await api.getMonthlyVisitPlan(start, data.user);
+      const rows = planRes.success ? planRes.data : [];
+      setPlanRows(rows);
+
+      const saps = [...new Set(rows.map((r) => r.sap).filter(Boolean))];
+      const storesRes = await api.getStoresBySap(saps);
+      const info = {};
+      (storesRes.data || []).forEach((s) => { info[s.store] = s; });
+      setStoreInfo(info);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    load(month);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [month]);
+
+  const { start: monthStart, end: monthEnd } = useMemo(() => monthRange(month), [month]);
+
+  const visitedSaps = useMemo(() => {
+    const set = new Set();
+    (data.inspections || []).forEach((i) => {
+      if (!i.sap || !i.ngayKiemTra) return;
+      const d = String(i.ngayKiemTra).slice(0, 10);
+      if (d >= monthStart && d <= monthEnd) set.add(i.sap);
+    });
+    return set;
+  }, [data.inspections, monthStart, monthEnd]);
+
+  const rowsWithStatus = useMemo(
+    () => planRows.map((r) => ({ ...r, visited: visitedSaps.has(r.sap), store: storeInfo[r.sap] })),
+    [planRows, visitedSaps, storeInfo]
+  );
+
+  const mapRows = rowsWithStatus.filter((r) => r.store?.lat && r.store?.long);
+  const noCoordCount = rowsWithStatus.length - mapRows.length;
+  const visitedCount = rowsWithStatus.filter((r) => r.visited).length;
+
+  const points = mapRows.map((r) => [Number(r.store.lat), Number(r.store.long)]);
+
+  const handleFile = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const wb = XLSX.read(ev.target.result, { type: 'array', cellDates: true });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const raw = XLSX.utils.sheet_to_json(ws, { defval: '' });
+
+        const rows = raw
+          .map((r) => ({
+            month: parseMonthCell(r['Tháng kế hoạch']) || `${month}-01`,
+            sap: String(r['Mã CH'] ?? '').trim(),
+            pic: String(r['PIC'] ?? '').trim(),
+          }))
+          .filter((r) => r.sap);
+
+        if (rows.length === 0) {
+          addToast('File không có dòng hợp lệ — thiếu cột "Mã CH"', 'error');
+          return;
+        }
+        setPreview({ rows, fileName: file.name });
+      } catch {
+        addToast('Không đọc được file', 'error');
+      }
+    };
+    reader.readAsArrayBuffer(file);
+    e.target.value = '';
+  };
+
+  const handleImport = async () => {
+    if (!preview?.rows?.length) return;
+    setImporting(true);
+    try {
+      const rows = preview.rows.map((r) => ({ ...r, user: data.user.id }));
+      const r = await api.importMonthlyVisitPlan(rows);
+      if (r.success) {
+        addToast(`Đã tải lên ${r.count} dòng kế hoạch`);
+        setPreview(null);
+        const months = [...new Set(rows.map((x) => x.month.slice(0, 7)))];
+        if (months.includes(month)) await load(month);
+      } else {
+        addToast(r.message || 'Tải lên thất bại', 'error');
+      }
+    } catch {
+      addToast('Lỗi kết nối, thử lại sau', 'error');
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  const handleDeleteRow = async (id) => {
+    if (!confirm('Xóa CH này khỏi kế hoạch tháng?')) return;
+    const r = await api.deleteMonthlyVisitPlanRow(id);
+    if (r.success) { setPlanRows((p) => p.filter((x) => x.id !== id)); addToast('Đã xóa'); }
+    else addToast(r.message || 'Xóa thất bại', 'error');
+  };
+
+  return (
+    <div className="space-y-5">
+      {/* Controls */}
+      <div className="flex flex-wrap items-end gap-3 px-6 py-4 bg-gray-50 border-b border-gray-100 rounded-t-xl">
+        <div>
+          <label className="block text-xs font-medium text-gray-500 mb-1">Tháng kế hoạch</label>
+          <input
+            type="month"
+            value={month}
+            onChange={(e) => setMonth(e.target.value)}
+            className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+          />
+        </div>
+
+        <input ref={fileRef} type="file" accept=".xlsx,.xls" onChange={handleFile} className="hidden" />
+        <button
+          onClick={() => fileRef.current?.click()}
+          className="flex items-center gap-1.5 px-3 py-2 border border-dashed border-gray-300 rounded-lg text-sm text-gray-600 hover:border-indigo-400 hover:text-indigo-600 transition-colors"
+        >
+          <Upload size={14} /> Tải lên kế hoạch (.xlsx)
+        </button>
+        <p className="text-xs text-gray-400">
+          Cột cần có: <span className="font-medium text-gray-600">Tháng kế hoạch</span>, <span className="font-medium text-gray-600">Mã CH</span>, <span className="font-medium text-gray-600">PIC</span>
+        </p>
+
+        {preview && (
+          <div className="w-full flex items-center gap-3 flex-wrap mt-1">
+            <span className="text-sm text-gray-700">
+              <span className="font-medium text-indigo-600">{preview.fileName}</span>
+              {' — '}<span className="font-semibold">{preview.rows.length}</span> dòng hợp lệ
+            </span>
+            <button
+              onClick={handleImport}
+              disabled={importing}
+              className="px-3 py-1.5 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
+            >
+              {importing ? 'Đang tải lên...' : 'Xác nhận tải lên'}
+            </button>
+            <button onClick={() => setPreview(null)} className="px-3 py-1.5 border border-gray-200 text-gray-600 text-sm rounded-lg hover:bg-white transition-colors">
+              Hủy
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Summary */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 px-6">
+        <div className="text-center p-3 rounded-lg bg-gray-50 border">
+          <p className="text-sm text-gray-500">Tổng CH kế hoạch</p>
+          <p className="text-2xl font-bold text-gray-800">{rowsWithStatus.length}</p>
+        </div>
+        <div className="text-center p-3 rounded-lg bg-green-50 border border-green-200">
+          <p className="text-sm text-gray-500">Đã đi</p>
+          <p className="text-2xl font-bold text-green-600">{visitedCount}</p>
+        </div>
+        <div className="text-center p-3 rounded-lg bg-amber-50 border border-amber-200">
+          <p className="text-sm text-gray-500">Chưa đi</p>
+          <p className="text-2xl font-bold text-amber-600">{rowsWithStatus.length - visitedCount}</p>
+        </div>
+      </div>
+
+      {/* Map */}
+      <div className="px-6">
+        {mapRows.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16 text-gray-400 border border-gray-100 rounded-xl">
+            <MapPin className="w-10 h-10 mb-3 opacity-40" />
+            <p className="text-sm">Chưa có CH nào trong kế hoạch có tọa độ để hiển thị</p>
+          </div>
+        ) : (
+          <div className="rounded-xl overflow-hidden border border-gray-200" style={{ height: 420 }}>
+            <MapContainer center={points[0]} zoom={12} style={{ height: '100%', width: '100%' }}>
+              <TileLayer
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+              />
+              <FitBounds points={points} />
+              {mapRows.map((r) => (
+                <CircleMarker
+                  key={r.id}
+                  center={[Number(r.store.lat), Number(r.store.long)]}
+                  radius={9}
+                  pathOptions={{
+                    color: r.visited ? '#16a34a' : '#d97706',
+                    fillColor: r.visited ? '#22c55e' : '#f59e0b',
+                    fillOpacity: 0.85,
+                    weight: 2,
+                  }}
+                >
+                  <LeafletTooltip>
+                    <div className="text-xs">
+                      <p className="font-semibold">{r.sap} — {r.store.store_name}</p>
+                      <p>{r.store.address}</p>
+                      {r.pic && <p>PIC: {r.pic}</p>}
+                      <p className={r.visited ? 'text-green-600' : 'text-amber-600'}>
+                        {r.visited ? 'Đã đi' : 'Chưa đi'}
+                      </p>
+                    </div>
+                  </LeafletTooltip>
+                </CircleMarker>
+              ))}
+            </MapContainer>
+          </div>
+        )}
+        <p className="text-xs text-gray-400 mt-2">
+          Xanh = đã đi (có biên bản ghi nhận trong tháng) · Vàng = chưa đi.
+          {noCoordCount > 0 && ` ${noCoordCount} CH chưa có tọa độ nên không hiển thị trên bản đồ.`}
+        </p>
+      </div>
+
+      {/* Detail table */}
+      <div className="px-6 pb-6 overflow-x-auto">
+        {rowsWithStatus.length === 0 ? (
+          <p className="text-sm text-gray-400 text-center py-8">Chưa có kế hoạch cho tháng này</p>
+        ) : (
+          <table className="min-w-full text-sm divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-4 py-2 text-left text-gray-500 font-medium">Mã CH</th>
+                <th className="px-4 py-2 text-left text-gray-500 font-medium">Tên CH</th>
+                <th className="px-4 py-2 text-left text-gray-500 font-medium">PIC</th>
+                <th className="px-4 py-2 text-left text-gray-500 font-medium">Trạng thái</th>
+                <th className="px-4 py-2 text-center text-gray-500 font-medium">Xóa</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {rowsWithStatus.map((r) => (
+                <tr key={r.id} className="hover:bg-gray-50">
+                  <td className="px-4 py-2 font-medium text-gray-700">{r.sap}</td>
+                  <td className="px-4 py-2 text-gray-600 max-w-xs truncate">{r.store?.store_name || '—'}</td>
+                  <td className="px-4 py-2 text-gray-600">{r.pic || '—'}</td>
+                  <td className="px-4 py-2">
+                    {r.visited ? (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">
+                        <CheckCircle2 size={12} /> Đã đi
+                      </span>
+                    ) : (
+                      <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700">Chưa đi</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-2 text-center">
+                    <button onClick={() => handleDeleteRow(r.id)} className="p-1.5 rounded-lg text-red-500 hover:bg-red-50 transition-colors">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      {loading && <LoadingModal message="Đang tải kế hoạch..." />}
+    </div>
+  );
+};
+
+export default MonthlyVisitPlanTab;
