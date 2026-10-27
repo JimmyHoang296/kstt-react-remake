@@ -83,6 +83,14 @@ const GroupSummaryTable = ({ title, labelHeader, rows }) => {
 const VIETNAM_CENTER = [16.047079, 108.20623];
 const VIETNAM_ZOOM = 5.3;
 
+// Khoảng toạ độ hợp lý cho Việt Nam — lọc bỏ dữ liệu lat/long lỗi (vd: thiếu
+// dấu thập phân, 9.928089 bị lưu thành 9928089) để 1 dòng dữ liệu rác không
+// làm fitBounds() tính sai và ẩn mất toàn bộ marker trên bản đồ.
+function isValidVNCoord(lat, lng) {
+  const la = Number(lat), lo = Number(lng);
+  return Number.isFinite(la) && Number.isFinite(lo) && la >= 8 && la <= 24 && lo >= 101 && lo <= 110;
+}
+
 function buildTooltipEl(r) {
   const div = document.createElement('div');
   div.style.fontSize = '12px';
@@ -136,6 +144,15 @@ const PlanMap = ({ mapRows, points, height }) => {
     const group = groupRef.current;
     if (!map || !group) return;
 
+    // invalidateSize() + đặt view TRƯỚC khi thêm marker: renderer SVG của
+    // Leaflet cache kích thước/bounds lúc khởi tạo map (có thể là 0 nếu
+    // container chưa kịp layout), và marker thêm vào trước khi bounds đó
+    // đúng sẽ bị coi là "nằm ngoài khung hình" nên vẽ path rỗng (d="M0 0").
+    map.invalidateSize();
+    if (points.length === 0) map.setView(VIETNAM_CENTER, VIETNAM_ZOOM, { animate: false });
+    else if (points.length === 1) map.setView(points[0], 15, { animate: false });
+    else map.fitBounds(points, { padding: [32, 32], animate: false });
+
     group.clearLayers();
     mapRows.forEach((r) => {
       L.circleMarker([Number(r.store.lat), Number(r.store.long)], {
@@ -148,12 +165,6 @@ const PlanMap = ({ mapRows, points, height }) => {
         .bindTooltip(buildTooltipEl(r))
         .addTo(group);
     });
-
-    if (points.length === 0) map.setView(VIETNAM_CENTER, VIETNAM_ZOOM);
-    else if (points.length === 1) map.setView(points[0], 15);
-    else map.fitBounds(points, { padding: [32, 32] });
-
-    map.invalidateSize();
   }, [mapRows, points]);
 
   return <div ref={containerRef} style={{ height, width: '100%' }} />;
@@ -210,7 +221,7 @@ const MonthlyVisitPlanTab = () => {
   const provinceBySap = useMemo(() => {
     const m = {};
     Object.values(storeInfo).forEach((s) => {
-      if (s.lat && s.long) m[s.store] = findProvince(s.lat, s.long);
+      if (isValidVNCoord(s.lat, s.long)) m[s.store] = findProvince(s.lat, s.long);
     });
     return m;
   }, [storeInfo]);
@@ -225,7 +236,7 @@ const MonthlyVisitPlanTab = () => {
     [planRows, visitedSaps, storeInfo, provinceBySap]
   );
 
-  const mapRows = rowsWithStatus.filter((r) => r.store?.lat && r.store?.long);
+  const mapRows = rowsWithStatus.filter((r) => isValidVNCoord(r.store?.lat, r.store?.long));
   const noCoordCount = rowsWithStatus.length - mapRows.length;
   const visitedCount = rowsWithStatus.filter((r) => r.visited).length;
 
