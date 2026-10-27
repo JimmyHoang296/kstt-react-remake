@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import * as XLSX from 'xlsx';
-import { MapContainer, TileLayer, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Upload, Trash2, CheckCircle2 } from 'lucide-react';
@@ -84,20 +83,6 @@ const GroupSummaryTable = ({ title, labelHeader, rows }) => {
 const VIETNAM_CENTER = [16.047079, 108.20623];
 const VIETNAM_ZOOM = 5.3;
 
-const FitBounds = ({ points }) => {
-  const map = useMap();
-  useEffect(() => {
-    if (points.length === 0) {
-      map.setView(VIETNAM_CENTER, VIETNAM_ZOOM);
-    } else if (points.length === 1) {
-      map.setView(points[0], 15);
-    } else {
-      map.fitBounds(points, { padding: [32, 32] });
-    }
-  }, [points, map]);
-  return null;
-};
-
 function buildTooltipEl(r) {
   const div = document.createElement('div');
   div.style.fontSize = '12px';
@@ -120,15 +105,39 @@ function buildTooltipEl(r) {
   return div;
 }
 
-// Vẽ marker trực tiếp bằng Leaflet (thay vì <CircleMarker> khai báo của
-// react-leaflet) — react-leaflet v5 dưới React 19 StrictMode có thể không gắn
-// lại layer con sau lần mount thứ 2, khiến bản đồ fit đúng vị trí nhưng không
-// hiện chấm nào. Quản lý layer thủ công qua useMap() tránh được lỗi này.
-const PlanMarkers = ({ rows }) => {
-  const map = useMap();
+// Bản đồ dựng bằng Leaflet thuần (không dùng react-leaflet) — react-leaflet
+// v5 dưới React 19 StrictMode không khởi tạo lại đúng sau lần mount thứ 2
+// (double-invoke effect của dev mode), khiến bản đồ không zoom/không hiện
+// marker dù dữ liệu đúng. Tự quản lý vòng đời map qua ref tránh được lỗi này.
+const PlanMap = ({ mapRows, points, height }) => {
+  const containerRef = useRef(null);
+  const mapRef = useRef(null);
+  const groupRef = useRef(null);
+
   useEffect(() => {
-    const group = L.layerGroup();
-    rows.forEach((r) => {
+    if (!containerRef.current || mapRef.current) return;
+    const map = L.map(containerRef.current).setView(VIETNAM_CENTER, VIETNAM_ZOOM);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      maxZoom: 19,
+    }).addTo(map);
+    mapRef.current = map;
+    groupRef.current = L.layerGroup().addTo(map);
+
+    return () => {
+      map.remove();
+      mapRef.current = null;
+      groupRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    const group = groupRef.current;
+    if (!map || !group) return;
+
+    group.clearLayers();
+    mapRows.forEach((r) => {
       L.circleMarker([Number(r.store.lat), Number(r.store.long)], {
         radius: 9,
         color: r.visited ? '#16a34a' : '#d97706',
@@ -139,10 +148,15 @@ const PlanMarkers = ({ rows }) => {
         .bindTooltip(buildTooltipEl(r))
         .addTo(group);
     });
-    group.addTo(map);
-    return () => { map.removeLayer(group); };
-  }, [rows, map]);
-  return null;
+
+    if (points.length === 0) map.setView(VIETNAM_CENTER, VIETNAM_ZOOM);
+    else if (points.length === 1) map.setView(points[0], 15);
+    else map.fitBounds(points, { padding: [32, 32] });
+
+    map.invalidateSize();
+  }, [mapRows, points]);
+
+  return <div ref={containerRef} style={{ height, width: '100%' }} />;
 };
 
 const MonthlyVisitPlanTab = () => {
@@ -369,15 +383,8 @@ const MonthlyVisitPlanTab = () => {
         </div>
 
         <div>
-          <div className="rounded-xl overflow-hidden border border-gray-200" style={{ height: 500 }}>
-            <MapContainer center={VIETNAM_CENTER} zoom={VIETNAM_ZOOM} style={{ height: '100%', width: '100%' }}>
-              <TileLayer
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-              />
-              <FitBounds points={points} />
-              <PlanMarkers rows={mapRows} />
-            </MapContainer>
+          <div className="rounded-xl overflow-hidden border border-gray-200">
+            <PlanMap mapRows={mapRows} points={points} height={720} />
           </div>
           <p className="text-xs text-gray-400 mt-2">
             Xanh = đã đi (có biên bản ghi nhận trong tháng) · Vàng = chưa đi.
