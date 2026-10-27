@@ -193,8 +193,11 @@ const MonthlyVisitPlanTab = () => {
 
       const saps = [...new Set(rows.map((r) => r.sap).filter(Boolean))];
       const storesRes = await api.getStoresBySap(saps);
+      // Khoá theo chữ hoa vì mã CH trong kế hoạch đôi khi viết thường trong khi
+      // bảng stores lưu chữ hoa (vd: "2ap1" vs "2AP1") — getStoresBySap đã trả
+      // về cả 2 biến thể, ở đây chuẩn hoá để tra cứu không phân biệt hoa/thường.
       const info = {};
-      (storesRes.data || []).forEach((s) => { info[s.store] = s; });
+      (storesRes.data || []).forEach((s) => { info[s.store.toUpperCase()] = s; });
       setStoreInfo(info);
 
       // "Đã đi" = có biên bản ghi nhận trong tháng — dùng cùng cách lấy dữ liệu
@@ -221,7 +224,7 @@ const MonthlyVisitPlanTab = () => {
   const provinceBySap = useMemo(() => {
     const m = {};
     Object.values(storeInfo).forEach((s) => {
-      if (isValidVNCoord(s.lat, s.long)) m[s.store] = findProvince(s.lat, s.long);
+      if (isValidVNCoord(s.lat, s.long)) m[s.store.toUpperCase()] = findProvince(s.lat, s.long);
     });
     return m;
   }, [storeInfo]);
@@ -230,8 +233,8 @@ const MonthlyVisitPlanTab = () => {
     () => planRows.map((r) => ({
       ...r,
       visited: visitedSaps.has(r.sap),
-      store: storeInfo[r.sap],
-      province: provinceBySap[r.sap] || null,
+      store: storeInfo[r.sap?.toUpperCase()],
+      province: provinceBySap[r.sap?.toUpperCase()] || null,
     })),
     [planRows, visitedSaps, storeInfo, provinceBySap]
   );

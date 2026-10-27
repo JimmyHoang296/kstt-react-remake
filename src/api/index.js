@@ -567,12 +567,15 @@ export const api = {
     return error ? { success: false, message: error.message } : { success: true };
   },
   // Lookup coords/name for a set of store codes (for plotting on the map).
+  // `inspections.sap` and `store_visit_plan.sap` are sometimes lowercase while
+  // `stores.store` is uppercase, so match both cases — `.in()` is case-sensitive.
   getStoresBySap: async (saps) => {
     if (!saps?.length) return { success: true, data: [] };
+    const variants = [...new Set(saps.flatMap((s) => [s, s.toUpperCase(), s.toLowerCase()]))];
     const { data, error } = await supabase
       .from('stores')
       .select('store, store_name, address, lat, long, chuoi')
-      .in('store', saps);
+      .in('store', variants);
     return error ? { success: false, message: error.message } : { success: true, data: data || [] };
   },
 
