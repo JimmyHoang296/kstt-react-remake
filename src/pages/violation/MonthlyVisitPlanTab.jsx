@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import * as XLSX from 'xlsx';
 import { MapContainer, TileLayer, CircleMarker, Tooltip as LeafletTooltip, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
-import { Upload, MapPin, Trash2, CheckCircle2 } from 'lucide-react';
+import { Upload, Trash2, CheckCircle2 } from 'lucide-react';
 import { api } from '../../api';
 import useStore from '../../store/useStore';
 import LoadingModal from '../../components/LoadingModal';
@@ -80,11 +80,15 @@ const GroupSummaryTable = ({ title, labelHeader, rows }) => {
   );
 };
 
+const VIETNAM_CENTER = [16.047079, 108.20623];
+const VIETNAM_ZOOM = 5.3;
+
 const FitBounds = ({ points }) => {
   const map = useMap();
   useEffect(() => {
-    if (points.length === 0) return;
-    if (points.length === 1) {
+    if (points.length === 0) {
+      map.setView(VIETNAM_CENTER, VIETNAM_ZOOM);
+    } else if (points.length === 1) {
       map.setView(points[0], 15);
     } else {
       map.fitBounds(points, { padding: [32, 32] });
@@ -100,6 +104,7 @@ const MonthlyVisitPlanTab = () => {
   const [month, setMonth] = useState(todayMonthStr());
   const [planRows, setPlanRows] = useState([]);
   const [storeInfo, setStoreInfo] = useState({}); // sap -> { store_name, address, lat, long }
+  const [visitedSaps, setVisitedSaps] = useState(new Set());
   const [loading, setLoading] = useState(false);
   const [preview, setPreview] = useState(null); // { rows, fileName }
   const [importing, setImporting] = useState(false);
@@ -108,7 +113,7 @@ const MonthlyVisitPlanTab = () => {
   const load = async (m) => {
     setLoading(true);
     try {
-      const { start } = monthRange(m);
+      const { start, end } = monthRange(m);
       const planRes = await api.getMonthlyVisitPlan(start, data.user);
       const rows = planRes.success ? planRes.data : [];
       setPlanRows(rows);
@@ -118,6 +123,16 @@ const MonthlyVisitPlanTab = () => {
       const info = {};
       (storesRes.data || []).forEach((s) => { info[s.store] = s; });
       setStoreInfo(info);
+
+      // "Đã đi" = có biên bản ghi nhận trong tháng — dùng cùng cách lấy dữ liệu
+      // (và cùng phạm vi quyền theo vai trò) với phần còn lại của trang TH ghi
+      // nhận, thay vì data.inspections toàn cục (có thể bị lọc khác với trang này).
+      const { role, name: userName, leadGhiNhan } = data.user || {};
+      const inspRes = await api.getInspectionsForReport({
+        startDate: start, endDate: end, role, userName, emps: data.emps || [], leadGhiNhan,
+      });
+      const visited = new Set((inspRes.data || []).map((i) => i.sap).filter(Boolean));
+      setVisitedSaps(visited);
     } finally {
       setLoading(false);
     }
@@ -127,18 +142,6 @@ const MonthlyVisitPlanTab = () => {
     load(month);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [month]);
-
-  const { start: monthStart, end: monthEnd } = useMemo(() => monthRange(month), [month]);
-
-  const visitedSaps = useMemo(() => {
-    const set = new Set();
-    (data.inspections || []).forEach((i) => {
-      if (!i.sap || !i.ngayKiemTra) return;
-      const d = String(i.ngayKiemTra).slice(0, 10);
-      if (d >= monthStart && d <= monthEnd) set.add(i.sap);
-    });
-    return set;
-  }, [data.inspections, monthStart, monthEnd]);
 
   // Tỉnh/thành suy ra từ lat/long qua ranh giới 34 tỉnh/thành (tham khảo dự án
   // "Danh sach BHX") — chỉ tính 1 lần mỗi khi danh sách store thay đổi.
@@ -318,48 +321,42 @@ const MonthlyVisitPlanTab = () => {
         </div>
 
         <div>
-          {mapRows.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 text-gray-400 border border-gray-100 rounded-xl h-full">
-              <MapPin className="w-10 h-10 mb-3 opacity-40" />
-              <p className="text-sm">Chưa có CH nào trong kế hoạch có tọa độ để hiển thị</p>
-            </div>
-          ) : (
-            <div className="rounded-xl overflow-hidden border border-gray-200" style={{ height: 500 }}>
-              <MapContainer center={points[0]} zoom={12} style={{ height: '100%', width: '100%' }}>
-                <TileLayer
-                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                />
-                <FitBounds points={points} />
-                {mapRows.map((r) => (
-                  <CircleMarker
-                    key={r.id}
-                    center={[Number(r.store.lat), Number(r.store.long)]}
-                    radius={9}
-                    pathOptions={{
-                      color: r.visited ? '#16a34a' : '#d97706',
-                      fillColor: r.visited ? '#22c55e' : '#f59e0b',
-                      fillOpacity: 0.85,
-                      weight: 2,
-                    }}
-                  >
-                    <LeafletTooltip>
-                      <div className="text-xs">
-                        <p className="font-semibold">{r.sap} — {r.store.store_name}</p>
-                        <p>{r.store.address}</p>
-                        {r.pic && <p>PIC: {r.pic}</p>}
-                        <p className={r.visited ? 'text-green-600' : 'text-amber-600'}>
-                          {r.visited ? 'Đã đi' : 'Chưa đi'}
-                        </p>
-                      </div>
-                    </LeafletTooltip>
-                  </CircleMarker>
-                ))}
-              </MapContainer>
-            </div>
-          )}
+          <div className="rounded-xl overflow-hidden border border-gray-200" style={{ height: 500 }}>
+            <MapContainer center={VIETNAM_CENTER} zoom={VIETNAM_ZOOM} style={{ height: '100%', width: '100%' }}>
+              <TileLayer
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+              />
+              <FitBounds points={points} />
+              {mapRows.map((r) => (
+                <CircleMarker
+                  key={r.id}
+                  center={[Number(r.store.lat), Number(r.store.long)]}
+                  radius={9}
+                  pathOptions={{
+                    color: r.visited ? '#16a34a' : '#d97706',
+                    fillColor: r.visited ? '#22c55e' : '#f59e0b',
+                    fillOpacity: 0.85,
+                    weight: 2,
+                  }}
+                >
+                  <LeafletTooltip>
+                    <div className="text-xs">
+                      <p className="font-semibold">{r.sap} — {r.store.store_name}</p>
+                      <p>{r.store.address}</p>
+                      {r.pic && <p>PIC: {r.pic}</p>}
+                      <p className={r.visited ? 'text-green-600' : 'text-amber-600'}>
+                        {r.visited ? 'Đã đi' : 'Chưa đi'}
+                      </p>
+                    </div>
+                  </LeafletTooltip>
+                </CircleMarker>
+              ))}
+            </MapContainer>
+          </div>
           <p className="text-xs text-gray-400 mt-2">
             Xanh = đã đi (có biên bản ghi nhận trong tháng) · Vàng = chưa đi.
+            {rowsWithStatus.length === 0 && ' Chưa có kế hoạch cho tháng này.'}
             {noCoordCount > 0 && ` ${noCoordCount} CH chưa có tọa độ nên không hiển thị trên bản đồ.`}
           </p>
         </div>
