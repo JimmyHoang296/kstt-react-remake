@@ -156,11 +156,11 @@ const PlanMap = ({ mapRows, points, height }) => {
     group.clearLayers();
     mapRows.forEach((r) => {
       L.circleMarker([Number(r.store.lat), Number(r.store.long)], {
-        radius: 9,
+        radius: 5,
         color: r.visited ? '#16a34a' : '#d97706',
         fillColor: r.visited ? '#22c55e' : '#f59e0b',
         fillOpacity: 0.85,
-        weight: 2,
+        weight: 1.5,
       })
         .bindTooltip(buildTooltipEl(r))
         .addTo(group);
@@ -389,12 +389,10 @@ const MonthlyVisitPlanTab = () => {
         </div>
       </div>
 
-      {/* Trái: tổng hợp theo KSTT / theo địa phương — Phải: bản đồ */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 px-6">
-        <div className="space-y-5">
-          <GroupSummaryTable title="Tổng hợp theo KSTT" labelHeader="KSTT" rows={byKstt} />
-          <GroupSummaryTable title="Tổng hợp theo địa phương" labelHeader="Tỉnh/Thành" rows={byProvince} />
-        </div>
+      {/* Trái: tổng hợp theo KSTT / theo địa phương (xếp ngang) — Phải: bản đồ */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr_1.6fr] gap-5 px-6">
+        <GroupSummaryTable title="Tổng hợp theo KSTT" labelHeader="KSTT" rows={byKstt} />
+        <GroupSummaryTable title="Tổng hợp theo địa phương" labelHeader="Tỉnh/Thành" rows={byProvince} />
 
         <div>
           <div className="rounded-xl overflow-hidden border border-gray-200">
