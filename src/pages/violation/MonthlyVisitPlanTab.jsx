@@ -82,6 +82,8 @@ const GroupSummaryTable = ({ title, labelHeader, rows }) => {
 
 const VIETNAM_CENTER = [16.047079, 108.20623];
 const VIETNAM_ZOOM = 5.3;
+// Giới hạn pan/zoom trong phạm vi Việt Nam — không cho lướt sang nước khác.
+const VIETNAM_BOUNDS = [[6.5, 100.5], [23.5, 110.5]];
 
 // Khoảng toạ độ hợp lý cho Việt Nam — lọc bỏ dữ liệu lat/long lỗi (vd: thiếu
 // dấu thập phân, 9.928089 bị lưu thành 9928089) để 1 dòng dữ liệu rác không
@@ -124,10 +126,17 @@ const PlanMap = ({ mapRows, points, height }) => {
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
-    const map = L.map(containerRef.current).setView(VIETNAM_CENTER, VIETNAM_ZOOM);
+    const map = L.map(containerRef.current, {
+      minZoom: 5,
+      maxBounds: VIETNAM_BOUNDS,
+      maxBoundsViscosity: 1,
+    }).setView(VIETNAM_CENTER, VIETNAM_ZOOM);
+    // OpenStreetMap miễn phí (không cần API key) — khử màu nhẹ qua CSS
+    // (class "map-tiles-simple") để nhìn đơn giản, bớt rối hơn bản đồ màu mặc định.
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
       maxZoom: 19,
+      className: 'map-tiles-simple',
     }).addTo(map);
     mapRef.current = map;
     groupRef.current = L.layerGroup().addTo(map);
@@ -167,7 +176,12 @@ const PlanMap = ({ mapRows, points, height }) => {
     });
   }, [mapRows, points]);
 
-  return <div ref={containerRef} style={{ height, width: '100%' }} />;
+  return (
+    <>
+      <style>{`.map-tiles-simple { filter: grayscale(55%) saturate(70%) brightness(1.03); }`}</style>
+      <div ref={containerRef} style={{ height, width: '100%' }} />
+    </>
+  );
 };
 
 const MonthlyVisitPlanTab = () => {
