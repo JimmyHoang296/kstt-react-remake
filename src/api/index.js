@@ -32,7 +32,7 @@ function sanitize(obj, { cols, nums = [], dates = [] }) {
 }
 
 const CASE_CFG = {
-  cols: ['id', 'email', 'rank', 'status', 'source', 'sap', 'store', 'summarize', 'pic',
+  cols: ['id', 'email', 'rank', 'level', 'status', 'source', 'sap', 'store', 'summarize', 'pic',
     'support', 'hod', 'startDate', 'endDate', 'group', 'lossValue', 'returnValue',
     'conclusion', 'note', 'type'],
   nums: ['rank', 'lossValue', 'returnValue'],
