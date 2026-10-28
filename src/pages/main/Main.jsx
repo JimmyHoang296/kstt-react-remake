@@ -315,14 +315,14 @@ const Dashboard = () => {
         />
       </div>
 
-      {/* Aging breakdown */}
-      <AgingBreakdown pendingCases={pendingCases} />
-
       {/* Charts */}
       <div className={`grid grid-cols-1 gap-6 ${isHod ? 'lg:grid-cols-2' : ''}`}>
         {isHod && <PendingByEmpChart pendingCases={pendingCases} />}
         <PendingBySourceChart pendingCases={pendingCases} />
       </div>
+
+      {/* Aging breakdown */}
+      <AgingBreakdown pendingCases={pendingCases} />
 
       {/* Overdue detail table */}
       {overdueCases.length > 0 && (
