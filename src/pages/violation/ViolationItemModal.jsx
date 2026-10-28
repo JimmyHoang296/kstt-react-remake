@@ -8,7 +8,7 @@ const TRANG_THAI_OPTIONS = ['Vi phạm', 'Nhắc nhở', 'Xác minh thêm', 'Ghi
 const LABEL = 'block text-xs font-medium text-gray-600 mb-1';
 const INPUT = 'w-full px-2 py-1.5 border rounded text-sm';
 const SELECT = 'w-full px-2 py-1.5 border rounded text-sm bg-white';
-const TEXTAREA = 'w-full px-2 py-1.5 border rounded text-sm resize-none';
+const TEXTAREA = 'w-full px-3 py-2 border rounded text-sm leading-relaxed resize-y';
 const SECTION = 'text-xs font-semibold text-gray-500 uppercase tracking-wide pb-1 border-b mb-3';
 
 const ViolationItemModal = ({ item, nhomGhiNhan, penalties, onClose, onSave }) => {
@@ -75,7 +75,7 @@ const ViolationItemModal = ({ item, nhomGhiNhan, penalties, onClose, onSave }) =
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-5xl max-h-[92vh] flex flex-col">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-7xl max-h-[95vh] flex flex-col">
 
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-3 border-b shrink-0 bg-gray-50 rounded-t-xl">
@@ -160,14 +160,14 @@ const ViolationItemModal = ({ item, nhomGhiNhan, penalties, onClose, onSave }) =
               {/* Mô tả */}
               <div>
                 <label className={LABEL}>Mô tả vi phạm</label>
-                <textarea name="mo_ta" value={formData.mo_ta || ''} onChange={set} rows={2}
+                <textarea name="mo_ta" value={formData.mo_ta || ''} onChange={set} rows={6}
                   className={TEXTAREA} placeholder="Mô tả chi tiết..." />
               </div>
 
               {/* Nguyên nhân */}
               <div>
                 <label className={LABEL}>Nguyên nhân</label>
-                <textarea name="nguyen_nhan" value={formData.nguyen_nhan || ''} onChange={set} rows={2}
+                <textarea name="nguyen_nhan" value={formData.nguyen_nhan || ''} onChange={set} rows={6}
                   className={TEXTAREA} placeholder="Nguyên nhân..." />
               </div>
             </div>
@@ -233,7 +233,7 @@ const ViolationItemModal = ({ item, nhomGhiNhan, penalties, onClose, onSave }) =
               {/* Nội dung kết luận */}
               <div>
                 <label className={LABEL}>Nội dung kết luận</label>
-                <textarea name="nd_ket_luan" value={formData.nd_ket_luan || ''} onChange={set} rows={3}
+                <textarea name="nd_ket_luan" value={formData.nd_ket_luan || ''} onChange={set} rows={6}
                   className={TEXTAREA} placeholder="Nội dung kết luận xử lý..." />
               </div>
             </div>
