@@ -182,6 +182,7 @@ const AgingBreakdown = ({ pendingCases }) => {
               <th className="px-4 py-2 text-left text-gray-500 font-medium">Ngày giao</th>
               <th className="px-4 py-2 text-right text-gray-500 font-medium">Số ngày đã giao</th>
               <th className="px-4 py-2 text-left text-gray-500 font-medium">Nhóm</th>
+              <th className="px-4 py-2 text-left text-gray-500 font-medium">Nội dung tóm tắt</th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
@@ -200,6 +201,7 @@ const AgingBreakdown = ({ pendingCases }) => {
                       {badge.label}
                     </span>
                   </td>
+                  <td className="px-4 py-2 max-w-sm truncate" title={c.summarize}>{c.summarize}</td>
                 </tr>
               );
             })}
@@ -346,6 +348,7 @@ const Dashboard = () => {
                   <th className="px-4 py-2 text-left text-gray-500 font-medium">Ngày giao</th>
                   <th className="px-4 py-2 text-right text-gray-500 font-medium">Ngày LV đã qua</th>
                   <th className="px-4 py-2 text-right text-gray-500 font-medium">Hạn</th>
+                  <th className="px-4 py-2 text-left text-gray-500 font-medium">Nội dung tóm tắt</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -366,6 +369,7 @@ const Dashboard = () => {
                       </td>
                       <td className="px-4 py-2 text-right font-semibold text-red-600">{elapsed}</td>
                       <td className="px-4 py-2 text-right text-gray-500">{deadline}</td>
+                      <td className="px-4 py-2 max-w-sm truncate" title={c.summarize}>{c.summarize}</td>
                     </tr>
                   );
                 })}
