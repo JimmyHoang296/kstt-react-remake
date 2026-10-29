@@ -1,8 +1,9 @@
 import { supabase } from './supabaseClient';
-import { URL as MAIN_URL, UPLOAD_IMAGE_URL } from '../assets/variables';
+import { VIOLATION_GAS_URL } from '../assets/variables';
 
-// GAS fetch — kept only for features that need Google services (doc gen).
-async function gasFetch(type, data, url = MAIN_URL) {
+// GAS fetch — kept only for the "Ghi nhận" features that need Google services
+// (doc gen, Telegram, AI summary, photo upload), all on kstt-gas-violation/.
+async function gasFetch(type, data, url = VIOLATION_GAS_URL) {
   const response = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -287,8 +288,8 @@ export const api = {
   },
   // file: { base64, filename, mimeType } — upload lên Drive (tài khoản riêng) rồi lưu record vào Supabase
   uploadInspectionImage: async ({ inspectionId, base64, filename, mimeType, caption }) => {
-    if (!UPLOAD_IMAGE_URL) return { success: false, message: 'Chưa cấu hình VITE_UPLOAD_IMAGE_URL' };
-    const uploadRes = await gasFetch('uploadImage', { inspectionId, base64, filename, mimeType }, UPLOAD_IMAGE_URL);
+    if (!VIOLATION_GAS_URL) return { success: false, message: 'Chưa cấu hình VITE_VIOLATION_GAS_URL' };
+    const uploadRes = await gasFetch('uploadImage', { inspectionId, base64, filename, mimeType });
     if (!uploadRes?.success) return { success: false, message: uploadRes?.message || 'Upload ảnh thất bại' };
     const { data: inserted, error } = await supabase
       .from('inspection_images')
