@@ -1,11 +1,18 @@
-import React, { useState, useEffect } from "react";
-import { Save, Trash, Printer, Plus, Pencil, Trash2, Search } from "lucide-react";
+import React, { useState, useEffect, useRef } from "react";
+import { Save, Trash, Printer, Plus, Pencil, Trash2, Search, Star, Upload, X as XIcon } from "lucide-react";
 import { api } from "../../api";
 import { supabase } from "../../api/supabaseClient";
 import { downloadBase64 } from "../../assets/helpers";
 import useStore from "../../store/useStore";
 import LoadingModal from "../../components/LoadingModal";
 import ViolationItemModal from "./ViolationItemModal";
+
+const fileToBase64 = (file) => new Promise((resolve, reject) => {
+  const reader = new FileReader();
+  reader.onload = () => resolve(String(reader.result).split(',')[1] || '');
+  reader.onerror = reject;
+  reader.readAsDataURL(file);
+});
 
 const CHAIN_OPTIONS = ["Win Urban MB MT", "Win Urban MN", "Rural", "Winmart"];
 
@@ -83,6 +90,13 @@ const ViolationDetailModal = ({ data, inspection, onClose, onCreated, onUpdated,
   const [storeSearching, setStoreSearching] = useState(false);
   const [storeResults, setStoreResults] = useState([]);
 
+  const [images, setImages] = useState([]);
+  const [loadingImages, setLoadingImages] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const fileInputRef = useRef(null);
+  // Giá trị "nổi bật" lúc mở modal — dùng để chỉ gửi AI+Telegram khi vừa BẬT (chưa từng nổi bật -> nổi bật)
+  const wasHighlightedRef = useRef(inspection?.noi_bat || false);
+
   const handleStoreLookup = async () => {
     if (!formData.sap?.trim()) { addToast('Nhập mã CH trước', 'error'); return; }
     setStoreSearching(true);
@@ -104,7 +118,7 @@ const ViolationDetailModal = ({ data, inspection, onClose, onCreated, onUpdated,
   };
 
   useEffect(() => {
-    if (currentId) fetchViolations(currentId);
+    if (currentId) { fetchViolations(currentId); fetchImages(currentId); }
   }, [currentId]);
 
   const fetchViolations = async (id) => {
@@ -114,9 +128,55 @@ const ViolationDetailModal = ({ data, inspection, onClose, onCreated, onUpdated,
     setLoadingVio(false);
   };
 
+  const fetchImages = async (id) => {
+    setLoadingImages(true);
+    const r = await api.getInspectionImages(id);
+    if (r.success) setImages(r.data);
+    setLoadingImages(false);
+  };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((p) => ({ ...p, [name]: value }));
+  };
+
+  const toggleHighlight = () => {
+    setFormData((p) => ({ ...p, noi_bat: !p.noi_bat }));
+  };
+
+  const handleFilesSelected = async (e) => {
+    const files = Array.from(e.target.files || []);
+    e.target.value = '';
+    if (!files.length || !currentId) return;
+    setUploadingImage(true);
+    for (const file of files) {
+      try {
+        const base64 = await fileToBase64(file);
+        const r = await api.uploadInspectionImage({
+          inspectionId: currentId, base64, filename: file.name, mimeType: file.type,
+        });
+        if (r.success) setImages((p) => [...p, r.data]);
+        else addToast(r.message || `Tải ảnh "${file.name}" thất bại`, 'error');
+      } catch {
+        addToast(`Tải ảnh "${file.name}" thất bại`, 'error');
+      }
+    }
+    setUploadingImage(false);
+  };
+
+  const handleCaptionChange = (id, caption) => {
+    setImages((p) => p.map((img) => img.id === id ? { ...img, caption } : img));
+  };
+
+  const handleCaptionBlur = async (id, caption) => {
+    await api.updateInspectionImageCaption(id, caption);
+  };
+
+  const handleDeleteImage = async (id) => {
+    if (!confirm('Xóa ảnh này?')) return;
+    const r = await api.deleteInspectionImage(id);
+    if (r.success) setImages((p) => p.filter((img) => img.id !== id));
+    else addToast(r.message || 'Xóa ảnh thất bại', 'error');
   };
 
   const handleSaveInspection = async () => {
@@ -143,6 +203,15 @@ const ViolationDetailModal = ({ data, inspection, onClose, onCreated, onUpdated,
       if (r.success) {
         onUpdated({ ...payload, id: currentId });
         addToast('Cập nhật thành công');
+        // Vừa bật "nổi bật" (trước đó chưa từng nổi bật) → AI tóm tắt + gửi Telegram kèm ảnh
+        if (payload.noi_bat && !wasHighlightedRef.current) {
+          wasHighlightedRef.current = true;
+          api.notifyHighlight({
+            inspection: { ...payload, id: currentId },
+            violations,
+            images: images.map((img) => ({ url: img.url, caption: img.caption })),
+          }).catch(() => {});
+        }
       } else addToast(r.message || 'Cập nhật thất bại', 'error');
     }
     setLoading(false);
@@ -217,6 +286,17 @@ const ViolationDetailModal = ({ data, inspection, onClose, onCreated, onUpdated,
               <button onClick={handleSaveInspection}
                 className="bg-indigo-500 text-white px-3 py-1.5 rounded-md hover:bg-indigo-600 flex items-center gap-1.5 text-xs font-medium cursor-pointer">
                 <Save size={13} /> {isNew ? 'Tạo mới' : 'Lưu'}
+              </button>
+            )}
+            {!isNew && canEdit && (
+              <button onClick={toggleHighlight} title="Đánh dấu nổi bật — khi lưu sẽ gửi AI tóm tắt kèm ảnh sang Telegram"
+                className={`px-3 py-1.5 rounded-md flex items-center gap-1.5 text-xs font-medium cursor-pointer border ${
+                  formData.noi_bat
+                    ? 'bg-yellow-400 border-yellow-400 text-white hover:bg-yellow-500'
+                    : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'
+                }`}>
+                <Star size={13} fill={formData.noi_bat ? 'currentColor' : 'none'} />
+                {formData.noi_bat ? 'Nổi bật' : 'Đánh dấu nổi bật'}
               </button>
             )}
             {!isNew && (
@@ -413,6 +493,62 @@ const ViolationDetailModal = ({ data, inspection, onClose, onCreated, onUpdated,
                 </div>
               )}
             </div>
+          )}
+
+          {/* Images section */}
+          {!isNew && (
+            <>
+              <div className="border-t" />
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-sm font-semibold text-gray-800">
+                    Hình ảnh <span className="text-gray-400 font-normal">({images.length})</span>
+                  </h4>
+                  {canEdit && (
+                    <>
+                      <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden"
+                        onChange={handleFilesSelected} />
+                      <button onClick={() => fileInputRef.current?.click()} disabled={uploadingImage}
+                        className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-indigo-600 text-white text-xs rounded-md hover:bg-indigo-700 disabled:opacity-50">
+                        <Upload size={12} className={uploadingImage ? 'animate-pulse' : ''} />
+                        {uploadingImage ? 'Đang tải...' : 'Thêm ảnh'}
+                      </button>
+                    </>
+                  )}
+                </div>
+
+                {loadingImages ? (
+                  <div className="text-center py-6 text-gray-400 text-xs">Đang tải...</div>
+                ) : images.length === 0 ? (
+                  <div className="text-center py-6 text-gray-400 text-xs border rounded-lg border-dashed">
+                    Chưa có ảnh — bấm "Thêm ảnh" để tải lên
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                    {images.map((img) => (
+                      <div key={img.id} className="border rounded-lg overflow-hidden bg-gray-50">
+                        <a href={img.url} target="_blank" rel="noreferrer">
+                          <img src={img.url} alt={img.caption || ''} className="w-full h-28 object-cover" />
+                        </a>
+                        <div className="p-1.5 flex items-center gap-1">
+                          <input type="text" value={img.caption || ''} placeholder="Chú thích..."
+                            readOnly={!canEdit}
+                            onChange={(e) => handleCaptionChange(img.id, e.target.value)}
+                            onBlur={(e) => handleCaptionBlur(img.id, e.target.value)}
+                            className="flex-1 min-w-0 px-1.5 py-1 border rounded text-xs" />
+                          {canEdit && (
+                            <button onClick={() => handleDeleteImage(img.id)}
+                              className="shrink-0 p-1 text-red-500 hover:bg-red-50 rounded">
+                              <XIcon size={12} />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </>
           )}
         </div>
       </div>

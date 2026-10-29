@@ -1,5 +1,5 @@
 import { supabase } from './supabaseClient';
-import { URL as MAIN_URL } from '../assets/variables';
+import { URL as MAIN_URL, UPLOAD_IMAGE_URL } from '../assets/variables';
 
 // GAS fetch — kept only for features that need Google services (doc gen).
 async function gasFetch(type, data, url = MAIN_URL) {
@@ -40,7 +40,7 @@ const CASE_CFG = {
 };
 
 const INSPECTION_CFG = {
-  cols: ['id', 'user', 'kstt', 'sap', 'store', 'qlkv', 'gdv', 'chain', 'ngayKiemTra', 'batCapVH', 'trang_thai'],
+  cols: ['id', 'user', 'kstt', 'sap', 'store', 'qlkv', 'gdv', 'chain', 'ngayKiemTra', 'batCapVH', 'trang_thai', 'noi_bat'],
   dates: ['ngayKiemTra'],
 };
 
@@ -272,6 +272,37 @@ export const api = {
   },
   deleteInspection: async (id) => {
     const { error } = await supabase.from('inspections').delete().eq('id', id);
+    return error ? { success: false, message: error.message } : { success: true };
+  },
+
+  // ---- Inspection images (lưu trên Drive qua Apps Script riêng, metadata ở Supabase) ----
+  getInspectionImages: async (inspectionId) => {
+    const { data, error } = await supabase
+      .from('inspection_images')
+      .select('*')
+      .eq('inspection_id', inspectionId)
+      .order('created_at');
+    if (error) return { success: false, message: error.message };
+    return { success: true, data: data || [] };
+  },
+  // file: { base64, filename, mimeType } — upload lên Drive (tài khoản riêng) rồi lưu record vào Supabase
+  uploadInspectionImage: async ({ inspectionId, base64, filename, mimeType, caption }) => {
+    if (!UPLOAD_IMAGE_URL) return { success: false, message: 'Chưa cấu hình VITE_UPLOAD_IMAGE_URL' };
+    const uploadRes = await gasFetch('uploadImage', { inspectionId, base64, filename, mimeType }, UPLOAD_IMAGE_URL);
+    if (!uploadRes?.success) return { success: false, message: uploadRes?.message || 'Upload ảnh thất bại' };
+    const { data: inserted, error } = await supabase
+      .from('inspection_images')
+      .insert({ inspection_id: inspectionId, url: uploadRes.url, caption: caption || '' })
+      .select('*')
+      .single();
+    return error ? { success: false, message: error.message } : { success: true, data: inserted };
+  },
+  updateInspectionImageCaption: async (id, caption) => {
+    const { error } = await supabase.from('inspection_images').update({ caption }).eq('id', id);
+    return error ? { success: false, message: error.message } : { success: true };
+  },
+  deleteInspectionImage: async (id) => {
+    const { error } = await supabase.from('inspection_images').delete().eq('id', id);
     return error ? { success: false, message: error.message } : { success: true };
   },
 
@@ -510,6 +541,8 @@ export const api = {
   createRecord: (data) => gasFetch('createRecord', data),
   // Fire-and-forget Telegram notification after creating a new inspection.
   notify: (data) => gasFetch('notify', data),
+  // AI (Gemini) tóm tắt + gửi Telegram kèm ảnh cho ghi nhận đánh dấu "nổi bật".
+  notifyHighlight: (data) => gasFetch('notifyHighlight', data),
 
   // ---- Visit Plans ----
   createVisitPlan: async (data) => {
